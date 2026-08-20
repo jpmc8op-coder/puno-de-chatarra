@@ -43,6 +43,28 @@ nada. Es el fallo más común de las PWA.
 
 ---
 
+## Actualizar sin escribir comandos
+
+Doble clic en **`ACTUALIZAR.bat`** (está en la raíz del proyecto). Sale un menú:
+
+    1  Publicar en la web       sube a GitHub Pages
+    2  Compilar el APK          deja _apk\PunoDeChatarra.apk
+    3  Las dos cosas
+    0  Salir
+
+Te pide en una línea qué cambiaste y se encarga del resto.
+
+**Al publicar en la web sube solo el número de `VERSION` de `sw.js`.** Ese olvido
+es el fallo clásico de las PWA: el móvil sigue sirviendo la copia guardada y
+parece que los cambios no se aplicaron. Con el script ya no puede pasar.
+
+Si prefieres los comandos a mano:
+
+```bash
+npm run apk                                   # solo el APK
+git add -A && git commit -m "..." && git push  # solo la web
+```
+
 ## Detalles que conviene no olvidar
 
 **`sw.js` no entra en el APK, a propósito.** Dentro de una app nativa los
