@@ -4963,12 +4963,17 @@ function interiorJefe(g, P){
    los pinchos temblarian.                                                     */
 let amenazaCfg = null, ojoMira = {x:110, y:110};
 function nuevaAmenaza(){
-  // Mas pinchos y mas largos: son lo primero que lee el ojo, antes que ningun
-  // detalle interior, y a 16 px apenas asomaban del contorno.
+  /* Son lo primero que lee el ojo, asi que tienen que asomar bien... pero NADA
+     puede pasar de 110 de radio: el sprite mide 220x220 con el centro en el
+     medio, y lo que se sale se corta en recto contra el borde. Ese corte era el
+     cuadrado que se veia alrededor de los jefes. Se limita la punta a 104. */
+  const TOPE = 104;
   const P = [], n = 14 + Math.floor(rnd(0,7));
   for(let i=0;i<n;i++){
     const a = rnd(0, 6.2832);
-    P.push({a, r: rnd(92, 108), l: rnd(28, 62), w: rnd(9, 20), t: rnd(0,1) > .35 ? 0 : 1});
+    const base = rnd(58, 70);              // de donde arranca el pincho
+    const l = Math.min(rnd(26, 46), TOPE - base);
+    P.push({a, r: base/0.62, l, w: rnd(9, 18), t: rnd(0,1) > .35 ? 0 : 1});
   }
   /* Los ojos van arriba y hacia el centro. Sueltos por todo el cuerpo caian en
      una pierna o en una oruga y se leian como pilotos, no como una mirada: la
@@ -5474,7 +5479,7 @@ function comprarFist(f){
   if(!L.cant || S.scrap < L.gasto) return;
   const antes = tramo(f);
   S.scrap -= L.gasto; S.fist[f.id] += L.cant;
-  sfx("buy"); marcar("f_"+f.id);
+  sfx("buy"); marcar("f_"+f.id); guardar();
   if(tramo(f) !== antes){
     toast("EQUIPADO: " + f.tramos[tramo(f)][1]);
     chispas(heroX, hombY, 36, CONFETI, 1.3);
@@ -5487,7 +5492,7 @@ function comprarCrew(i){
   const tenia = S.crew[i], antesHum = humanidad();
   if(!L.cant || S.scrap < L.gasto) return;
   S.crew[i] += L.cant;
-  S.scrap -= L.gasto; sfx("buy"); marcar("c_"+i);
+  S.scrap -= L.gasto; sfx("buy"); marcar("c_"+i); guardar();
   if(tenia === 0){
     const desp = humanidad();
     toast("IMPLANTE INSTALADO<br>" + CREW[i].n);
@@ -6441,6 +6446,9 @@ function frame(now){
 cv.addEventListener("pointerdown", e => {
   e.preventDefault();
   if(e.isTrusted) tocado = true;
+  // Con un panel abierto, el primer toque en el juego lo CIERRA y no pega. Ir a
+  // buscar el boton CERRAR rompe el ritmo: la mano ya esta sobre el objeto.
+  if($("side").classList.contains("abierto")){ cerrarPanel(); return; }
   const r = cv.getBoundingClientRect();
   const px = e.clientX - r.left, py = e.clientY - r.top;
   if(tocarChispa(px, py)) return;      // cazarla no gasta el golpe
@@ -7064,7 +7072,15 @@ construir();
 refrescar();
 if(!habia) setTimeout(() => toast("Golpea el aparato.<br>Cada puñetazo es chatarra."), 600);
 setInterval(guardar, 5000);
+
+/* `beforeunload` NO se dispara en moviles al cambiar de app ni al cerrarla, que
+   es justo cuando hace falta. Los fiables son estos dos: `visibilitychange` en
+   cuanto la pantalla se va a segundo plano, y `pagehide` al descargar. Se dejan
+   los tres porque cada plataforma cumple con uno distinto. */
 window.addEventListener("beforeunload", guardar);
+window.addEventListener("pagehide", guardar);
+document.addEventListener("visibilitychange", () => { if(document.hidden) guardar(); });
+window.addEventListener("blur", guardar);
 requestAnimationFrame(frame);
 </script>
 </body>

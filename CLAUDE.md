@@ -863,6 +863,37 @@ también quedaba descolgada. Corregidas las dos cosas, el error es **0 px en tod
 el arco**. Ojo: `posObj()` la usan también `destPuno()` y los impactos, así que
 el fallo desviaba el blanco de los puños, no solo la sombra.
 
+## Guardar de verdad en móvil
+
+`beforeunload` **no se dispara en móviles** al cambiar de app ni al cerrarla —
+está documentado, y es justo el momento en que hace falta. Con solo eso y un
+`setInterval` de 5 s, en el teléfono se perdía lo último hecho.
+
+Los fiables son **`visibilitychange`** (en cuanto la pantalla pasa a segundo
+plano) y **`pagehide`**. Están puestos los cuatro, incluido `blur`, porque cada
+plataforma cumple con uno distinto. Y además se guarda **justo después de cada
+compra**, que es cuando más duele perderlo.
+
+> El mecanismo de guardado en sí nunca estuvo roto: el ciclo completo
+> guardar → borrar de memoria → cargar conserva los 12 campos. El fallo era
+> **cuándo** se llamaba, no cómo.
+
+## Nada puede pasar de 110 de radio
+
+El sprite mide 220×220 con el centro en el medio, así que **cualquier cosa que
+pase de 110 de radio se corta en recto contra el borde**. Los pinchos de los
+jefes llegaban a 129 y dejaban un cuadrado visible alrededor, que parecía un
+efecto mal hecho. Van limitados a 104.
+
+Comprobado contando píxeles opacos en las cuatro filas del borde del sprite:
+deben ser **0**.
+
+## Tocar el juego cierra el panel
+
+Con un panel abierto, el primer toque en la pantalla de juego lo cierra y **no
+pega**; el segundo ya pega. Ir a buscar el botón CERRAR rompe el ritmo: en un
+clicker la mano ya está sobre el objeto.
+
 ## Que un jefe dé miedo
 
 Eran máquinas grandes, y una máquina grande es un aparato. Lo que la vuelve un
