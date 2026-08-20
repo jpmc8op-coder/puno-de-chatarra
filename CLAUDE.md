@@ -408,6 +408,49 @@ juego, así que lo que se ve es lo que saldría.
 Existe porque describir con palabras qué falla en una pose es lento y ambiguo:
 con la hoja, la respuesta es un número.
 
+## Guía de la primera partida
+
+La primera vez que se abre el juego salen **siete nubes**, una frase cada una,
+que señalan con rabito la cosa de la que hablan y apagan el resto de la pantalla.
+El orden es: el aparato → la chatarra → la barra de vida → PUÑO → AUMENTOS →
+la humanidad → EQUIPO y NÚCLEOS.
+
+Dos decisiones que importan:
+
+- **La primera nube no tiene botón.** Para pasar hay que pegarle al aparato de
+  verdad. Se aprende antes haciéndolo una vez que leyéndolo tres, y de paso queda
+  probado que el toque cae donde el dedo.
+- **El lado de la nube se elige por el hueco que queda**, no por la mitad de
+  pantalla en la que caiga el objetivo. Con la regla fácil, la nube acababa
+  tapando justo lo que señalaba (la barra de vida y la humanidad).
+
+Se guarda en `S.tuto`. Con **`?tuto`** en la URL vuelve a salir sin borrar la
+partida, y en la pestaña NÚCLEOS hay un botón para repetirla.
+
+## El enjambre se ve
+
+ENJAMBRE multiplicaba por cinco la producción y no se veía nada: el número de
+arriba subía más rápido y ya. Un bono invisible no se siente, y este era además
+el más caro de cazar, porque hay que dejar de pegar para ir a por él.
+
+Ahora tiene dos partes:
+
+1. **La nodriza.** El dron que trae ENJAMBRE no es el cuadricóptero con caja de
+   los otros tres: es un hexágono con seis crías acopladas al casco. Se distingue
+   de refilón, que es cuando hay que decidir si vale la pena ir a por él.
+2. **La lluvia.** Durante los veinte segundos, las crías caen en picado sobre el
+   aparato —una cada décima de segundo— y **cada impacto descarga el daño que los
+   implantes llevan acumulado**, usando el mismo mecanismo (`deudaAuto`) que ya
+   descargaban los brazos mecánicos.
+
+Es la misma cifra de siempre: medido, el daño aplicado durante el enjambre es el
+`dps()` por el tiempo transcurrido con un error del 0,1 %. No se paga dos veces —
+se entrega a golpes que se ven en vez de goteando.
+
+`prodAuto()` pone un **suelo** de `golpeBase()*2.2` mientras dura: sin él, quien
+todavía no tiene implantes cazaba el bono más vistoso del juego para no recibir
+absolutamente nada.
+
 ## Lámina de diseños
 
 Abrir el juego con **`?lamina`** (`index.html?lamina`) dibuja tres hojas de

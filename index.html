@@ -373,6 +373,61 @@ body{
   box-shadow:0 7px 0 var(--borde), 0 0 40px rgba(255,209,102,.35);
   text-align:center;max-width:88vw}
 #toast.on{opacity:1;transform:translateX(-50%) translateY(8px)}
+
+/* ---------- GUIA DE LA PRIMERA PARTIDA ----------
+   Un clicker se explica solo... a quien ya ha jugado a uno. Al resto hay que
+   decirle que la pantalla se toca, que el numero de arriba es la moneda y que
+   las pestañas de abajo son donde se gasta. Se hace señalando: una nube con
+   rabito apuntando a la cosa, y todo lo demas apagado para que no compita. */
+/* La capa madre NO recibe toques: sin esto se tragaba el golpe del primer paso
+   aunque el hijo que lo captura estuviera desactivado. */
+#tuto{position:fixed;inset:0;z-index:130;display:none;pointer-events:none}
+#tuto.on{display:block}
+#tutoNube, #tutoSig, #tutoSalt{pointer-events:auto}
+/* Capa que traga el toque para pasar de nube. En el paso del golpe se
+   desactiva: ahi el dedo tiene que llegar al aparato de verdad. */
+#tutoCap{position:absolute;inset:0;pointer-events:auto}
+#tuto.libre #tutoCap{pointer-events:none}
+#tutoFoco{position:absolute;border-radius:18px;pointer-events:none;
+  box-shadow:0 0 0 9999px rgba(9,6,26,.82);
+  transition:top .34s cubic-bezier(.34,1.25,.5,1), left .34s cubic-bezier(.34,1.25,.5,1),
+             width .34s, height .34s, border-radius .34s}
+#tuto.sigue #tutoFoco{transition:none}   /* el aparato se balancea: sin inercia */
+/* `inherit` y no un valor fijo: el foco es redondo sobre el aparato y
+   rectangular sobre un boton, y el contorno tiene que ir a juego. */
+#tutoFoco::before{content:"";position:absolute;inset:-4px;border-radius:inherit;
+  border:3px solid var(--amber);opacity:.9}
+#tutoFoco::after{content:"";position:absolute;inset:-4px;border-radius:inherit;
+  border:3px solid var(--amber);animation:tutoLate 1.3s infinite}
+@keyframes tutoLate{
+  0%{transform:scale(1);opacity:.7} 75%{transform:scale(1.14);opacity:0} 100%{opacity:0}}
+#tutoNube{position:absolute;width:320px;max-width:calc(100vw - 28px);
+  background:linear-gradient(180deg,#fff6e2,#ffdfa4);color:#2a1a4d;
+  border:4px solid #1b1130;border-radius:20px;padding:13px 15px 11px;
+  box-shadow:0 9px 0 rgba(0,0,0,.5), 0 0 46px rgba(255,209,102,.28)}
+#tutoRabo{position:absolute;width:22px;height:22px;background:#fff6e2;
+  border:4px solid #1b1130;transform:rotate(45deg)}
+#tutoNube b{display:block;font-size:14px;font-weight:900;letter-spacing:1.4px;
+  color:#7a2f8f;margin-bottom:5px}
+#tutoNube p{margin:0;font-size:14px;line-height:1.4;font-weight:600}
+#tutoPie{display:flex;align-items:center;gap:10px;margin-top:11px}
+#tutoPaso{font-size:11px;font-weight:900;letter-spacing:1px;color:#7c6a9c;flex:1}
+#tutoSalt{background:none;border:0;color:#7c6a9c;font:inherit;font-size:12px;
+  font-weight:700;cursor:pointer;text-decoration:underline;padding:4px}
+#tutoSig{background:linear-gradient(180deg,#ffd166,#f0a93c);color:#2a1a4d;
+  border:3px solid #1b1130;border-radius:12px;padding:7px 15px;cursor:pointer;
+  font:inherit;font-size:13px;font-weight:900;letter-spacing:.6px;
+  box-shadow:0 4px 0 #1b1130;transition:transform .1s}
+#tutoSig:active{transform:translateY(3px);box-shadow:0 1px 0 #1b1130}
+#tutoSig.espera{background:linear-gradient(180deg,#c9bfe0,#a99ec6);
+  color:#4c3f6b;box-shadow:0 4px 0 #1b1130;animation:tutoRespira 1.4s infinite}
+@keyframes tutoRespira{0%,100%{opacity:.75} 50%{opacity:1}}
+/* El enlace para repetirla, dentro de NUCLEOS */
+#verTuto{width:100%;background:var(--panel2);color:var(--dim);border:3px solid var(--borde);
+  border-radius:14px;padding:11px;font:inherit;font-size:13px;font-weight:800;
+  letter-spacing:.5px;cursor:pointer;margin-bottom:12px}
+#verTuto:hover{color:var(--txt);border-color:var(--amber)}
+@media (max-width:560px){ #tutoNube{width:auto;left:14px;right:14px;padding:12px 13px 10px} }
 </style>
 </head>
 <body>
@@ -451,6 +506,7 @@ body{
         <div id="eqList"></div>
       </div>
       <div class="pane" id="p-core">
+        <button id="verTuto">¿CÓMO SE JUEGA? · repetir la guía</button>
         <div id="coreBox"></div>
         <div id="logrosBox"></div>
       </div>
@@ -459,6 +515,20 @@ body{
 
 </div>
 <div id="toast"></div>
+<div id="tuto">
+  <div id="tutoCap"></div>
+  <div id="tutoFoco"></div>
+  <div id="tutoRabo"></div>
+  <div id="tutoNube">
+    <b id="tutoTit"></b>
+    <p id="tutoTxt"></p>
+    <div id="tutoPie">
+      <span id="tutoPaso"></span>
+      <button id="tutoSalt">Saltar</button>
+      <button id="tutoSig">Siguiente</button>
+    </div>
+  </div>
+</div>
 <script>
 /* =========================================================================
    PUÑO DE CHATARRA — clicker de demolición de chatarra tecnológica
@@ -955,7 +1025,7 @@ const NEW = () => ({
   crew:CREW.map(()=>0),
   cores:0, resets:0, asim:0, logros:[], reliquias:[], heroe:0,
   vistos:[], chispas:0, comboMax:0, asimAbat:0,
-  sound:true, t:Date.now()
+  sound:true, tuto:0, t:Date.now()
 });
 let S = NEW();
 
@@ -5391,6 +5461,7 @@ function mordidaCercaDe(sx, sy){
 
 function golpear(px, py){
   ac();
+  tutoGolpeDado();
   combo++; comboT = 1.15; swing = 1;
   if(combo > (S.comboMax || 0)) S.comboMax = combo;
   ladoPuno = (px === undefined) ? 1 - ladoPuno          // teclado: se turnan
@@ -6321,6 +6392,7 @@ function dibujar(dt){
   dibujarBrazos(ctx, reloj);
   if(PJ_VISIBLE) jugadorEspalda(ctx, reloj, swing, ladoPuno);
   dibujarPunos(ctx);
+  dibujarLluvia(ctx);
   dibujarChispa(ctx);
 
   dibujarFrente(ctx, zi);        // chatarra colosal, delante de la accion
@@ -6387,14 +6459,18 @@ function frame(now){
 
   if(enjambre > 0) enjambre = Math.max(0, enjambre - dtR);
   moverChispa(dtR);
+  moverLluvia(dtR);
   if(muerto > 0) muerto -= dt;
 
-  const D = dps();
+  const D = prodAuto();
   if(D > 0){
     // El daño se acumula y lo descarga `impactoBrazo` en cada golpe visible. Si
     // no hay ningún brazo en pantalla que pueda descargarlo, se aplica seguido.
     deudaAuto += D*dtR;
-    if(!tiposCuadrilla().length && muerto <= 0 && slow <= 0 && hitStop <= 0){
+    // Con enjambre, quien descarga son las crias: si ademas goteara, el aparato
+    // recibiria el daño antes de que se viera caer a nadie.
+    if(!tiposCuadrilla().length && !lluvia.length && enjambre <= 0
+       && muerto <= 0 && slow <= 0 && hitStop <= 0){
       const d = deudaAuto; deudaAuto = 0;
       acumAuto += d; danar(d);
     }
@@ -6495,6 +6571,7 @@ function frame(now){
     $("comboI").style.width = (comboT/1.15*100) + "%";
   } else cw.classList.remove("live");
 
+  if(enTuto() && TUTO[tutoI].foco === "objeto") tutoColocar();
   animarUI(dtR);
   acumUI += dtR;
   if(acumUI > .09){ acumUI = 0; refrescar(); revisarLogros(); }
@@ -6701,6 +6778,112 @@ function nacerChispa(){
   chispa.vx = (chispa.x < 0 ? 1 : -1) * (CW + 2*m)/9;
   sfx("chispa");
 }
+
+/* ---------- LA LLUVIA DEL ENJAMBRE ----------
+   ENJAMBRE multiplicaba por cinco la produccion y no se veia NADA: el numero de
+   arriba subia mas rapido y ya. Un bono que no se ve no se siente, y este era
+   ademas el mas caro de cazar, porque hay que dejar de pegar para ir a por el.
+
+   Ahora la nodriza suelta a sus crias: durante veinte segundos caen en picado
+   sobre el aparato, una cada pocas centesimas, y cada impacto DESCARGA el daño
+   que los implantes llevan acumulado. Es la misma cifra de siempre —no se paga
+   dos veces—, solo que entregada a golpes que se ven en vez de goteando.
+
+   El suelo importa: sin el, quien todavia no tiene implantes cazaba el bono mas
+   vistoso del juego para no recibir absolutamente nada.                       */
+let lluvia = [], lluviaProx = 0;
+const prodAuto = () => enjambre > 0 ? Math.max(dps(), golpeBase()*2.2) : dps();
+
+function nacerCria(){
+  const o = posObj(), SV = objVis();
+  const a = Math.random()*6.2832, rad = Math.sqrt(Math.random())*SV*0.42;
+  const tx = o.x + Math.cos(a)*rad, ty = o.y + Math.sin(a)*rad;
+  lluvia.push({
+    x: tx + rnd(-1,1)*CW*0.42,          // entran abiertas, no en columna
+    y: -30*U - Math.random()*60*U,
+    tx, ty, t: 0, dur: rnd(0.34, 0.52),
+    giro: rnd(-1,1)*0.5, fase: Math.random()*6.28, fase2: 0
+  });
+}
+
+function moverLluvia(dt){
+  if(enjambre > 0 && muerto <= 0){
+    lluviaProx -= dt;
+    const cada = CW < 420 ? 0.15 : 0.10;
+    if(lluviaProx <= 0 && lluvia.length < 28){ nacerCria(); lluviaProx = cada; }
+  }
+  for(let i = lluvia.length - 1; i >= 0; i--){
+    const c = lluvia[i];
+    if(c.fase2){                                   // ya pego: se retira girando
+      c.fase2 -= dt;
+      c.x += c.vx*dt; c.y += c.vy*dt; c.vy -= 120*U*dt;
+      c.giro += dt*9;
+      if(c.fase2 <= 0) lluvia.splice(i, 1);
+      continue;
+    }
+    c.t += dt/c.dur;
+    if(c.t >= 1){
+      impactoCria(c.tx, c.ty);
+      c.fase2 = 0.42;
+      c.vx = rnd(-1,1)*160*U; c.vy = -rnd(120, 260)*U;
+      c.x = c.tx; c.y = c.ty;
+      continue;
+    }
+    const k = c.t*c.t;                             // acelera al caer
+    c.x = c.x + (c.tx - c.x)*Math.min(1, dt*7);    // se endereza sobre el blanco
+    c.y = c.y + (c.ty - c.y)*Math.min(1, k*dt*26 + dt*4);
+  }
+}
+
+/* El impacto de una cria: entrega el daño acumulado, igual que hace el brazo
+   mecanico. No suma daño nuevo — lo hace visible. */
+function impactoCria(x, y){
+  if(muerto <= 0 && deudaAuto > 0){
+    const d = deudaAuto; deudaAuto = 0;
+    acumAuto += d; danar(d);
+  }
+  chispas(x, y, 6, ["#22e6ff", "#9fe8ff", "#ffffff"], .45);
+  if(Math.random() < 0.4) anillo(x, y, "#22e6ff", objS*0.085);
+  shake = Math.max(shake, 1.1*U);
+  zObjV += 1.5;                                     // el aparato acusa la carga
+  pendV += (x < CW*0.5 ? 1 : -1) * 0.18;
+  if(Math.random() < 0.5) sfx("auto");              // no en todas: seria un zumbido
+}
+
+function dibujarLluvia(g){
+  if(!lluvia.length) return;
+  const R = Math.max(3, 7*U);
+  const OSC = "#150f33", MET = "#b9c2cc", CY = "#22e6ff";
+  lluvia.forEach(c => {
+    const vivo = c.fase2 ? Math.max(0, c.fase2/0.42) : 1;
+    g.save();
+    g.globalAlpha = vivo;
+    g.translate(c.x, c.y);
+    g.rotate(c.fase2 ? c.giro : (c.tx - c.x)*0.004);
+    // estela: es lo que convierte la caida en un picado
+    if(!c.fase2){
+      g.globalAlpha = vivo*0.34;
+      rr(g, -R*0.34, -R*3.4, R*0.68, R*3.2, CY, R*0.34);
+      g.globalAlpha = vivo;
+    }
+    // travesaño de rotores
+    ln(g, -R*1.25, -R*0.55, R*1.25, -R*0.55, OSC, R*0.44);
+    ln(g, -R*1.25, -R*0.55, R*1.25, -R*0.55, MET, R*0.24);
+    g.globalAlpha = vivo*0.40;
+    ci(g, -R*1.25, -R*0.55, R*0.40, CY);
+    ci(g,  R*1.25, -R*0.55, R*0.40, CY);
+    g.globalAlpha = vivo;
+    ci(g, -R*1.25, -R*0.55, R*0.16, MET);
+    ci(g,  R*1.25, -R*0.55, R*0.16, MET);
+    // cuerpo, con morro apuntando abajo
+    rr(g, -R*0.62, -R*0.50, R*1.24, R*1.20, OSC, R*0.34);
+    rr(g, -R*0.44, -R*0.34, R*0.88, R*0.88, MET, R*0.26);
+    ci(g, 0, R*0.30, R*0.26, CY);              // el ojo, mirando al blanco
+    g.restore();
+  });
+  g.globalAlpha = 1;
+}
+
 function moverChispa(dt){
   if(chispa){
     chispa.x += chispa.vx*dt;
@@ -6718,6 +6901,62 @@ function radioChispa(){ return 26*U; }
    es un dron de verdad —fuselaje, cuatro brazos con rotores, tren de aterrizaje
    y una garra con la caja del premio colgando— dibujado con las mismas piezas
    que los aparatos, para que pertenezca al mismo mundo. */
+/* La NODRIZA. El enjambre no viaja en una caja: viaja enganchado al casco. Un
+   hexagono con seis crias acopladas se distingue de un cuadricoptero con carga
+   incluso de refilon, que es cuando hay que decidir si vale la pena ir a por el. */
+function dibujarNodriza(g, r, fin){
+  const OSC = "#150f33", MET = "#b9c2cc", MET_D = "#5a6285", CY = "#22e6ff";
+
+  // halo propio, mas frio que el de los otros
+  g.globalAlpha = fin * (0.30 + Math.sin(reloj*9)*0.10);
+  ci(g, 0, 0, r*3.1, CY);
+  g.globalAlpha = fin;
+
+  // casco hexagonal
+  const hex = (rad, col) => {
+    g.fillStyle = col; g.beginPath();
+    for(let i=0;i<6;i++){
+      const a = i*1.0472 + 0.5236;
+      const x = Math.cos(a)*rad, y = Math.sin(a)*rad*0.82;
+      i ? g.lineTo(x,y) : g.moveTo(x,y);
+    }
+    g.closePath(); g.fill();
+  };
+  hex(r*1.62, OSC); hex(r*1.36, MET_D); hex(r*1.02, MET);
+  // celdas de colmena
+  g.globalAlpha = fin*0.55;
+  [[-0.46,-0.20],[0.02,-0.36],[0.48,-0.16],[-0.30,0.28],[0.26,0.30]].forEach(q => {
+    hexChico(g, q[0]*r, q[1]*r, r*0.24, CY);
+  });
+  g.globalAlpha = fin;
+  aro(g, 0, 0, r*1.20, CY, Math.max(1.6, U*1.5));
+
+  // ojo de mando
+  ci(g, 0, 0, r*0.40, OSC); ci(g, 0, 0, r*0.28, CY);
+  ci(g, -r*0.08, -r*0.10, r*0.11, "#eaffff");
+
+  // seis crias acopladas al borde, listas para soltarse
+  for(let i=0;i<6;i++){
+    const a = i*1.0472 + reloj*0.5;
+    const dx = Math.cos(a)*r*1.78, dy = Math.sin(a)*r*1.48;
+    ln(g, dx*0.62, dy*0.62, dx, dy, MET_D, r*0.14);
+    ci(g, dx, dy, r*0.30, OSC); ci(g, dx, dy, r*0.19, MET);
+    ci(g, dx, dy, r*0.08, CY);
+    g.globalAlpha = fin*0.42;                       // el disco de su rotor
+    ci(g, dx, dy, r*0.44, CY);
+    g.globalAlpha = fin;
+  }
+}
+function hexChico(g, x, y, rad, col){
+  g.fillStyle = col; g.beginPath();
+  for(let i=0;i<6;i++){
+    const a = i*1.0472 + 0.5236;
+    const px = x + Math.cos(a)*rad, py = y + Math.sin(a)*rad;
+    i ? g.lineTo(px,py) : g.moveTo(px,py);
+  }
+  g.closePath(); g.fill();
+}
+
 function dibujarChispa(g){
   if(!chispa) return;
   const r = radioChispa();
@@ -6730,6 +6969,12 @@ function dibujarChispa(g){
   g.translate(chispa.x, chispa.y);
   g.rotate(cab - lado*0.12);
   g.scale(lado, 1);
+
+  if((chispa.bono || BONOS[0]).id === "enjambre"){
+    dibujarNodriza(g, r, fin);
+    g.restore(); g.globalAlpha = 1;
+    return;
+  }
 
   // halo: es lo que hace que se vea aunque el fondo este cargado
   g.globalAlpha = fin * (0.26 + Math.sin(reloj*9)*0.09);
@@ -7110,6 +7355,122 @@ function dibujarVariante(c, modo){
   else { manos(); cabeza(); }
 }
 
+
+/* ---------- 24b. GUIA DE LA PRIMERA PARTIDA ----------
+   Siete nubes, una frase cada una. Señalan CON RABITO a la cosa de la que
+   hablan y apagan el resto de la pantalla, que es lo unico que consigue que se
+   lea una sola de ellas a la vez.
+
+   La primera no tiene boton: para pasar hay que pegarle al aparato. Se aprende
+   antes haciendolo una vez que leyendolo tres.                                */
+const TUTO = [
+  { foco:"objeto", t:"ESTO SE ROMPE A PUÑOS", espera:"golpe",
+    d:"Toca el aparato para golpearlo. Donde pongas el dedo, ahí cae el puño." },
+  { foco:".banco", t:"CHATARRA",
+    d:"Cada golpe suelta chatarra. Es la moneda: con ella se paga todo lo demás." },
+  { foco:"#hpwrap", t:"LO QUE LE QUEDA",
+    d:"Cuando la barra llega a cero el aparato revienta y entra otro. Cada diez, un jefe." },
+  { foco:'.tab[data-p="p-fist"]', t:"PUÑO",
+    d:"Aquí subes lo que hace cada golpe tuyo. Empiezas con las manos desnudas." },
+  { foco:'.tab[data-p="p-crew"]', t:"AUMENTOS",
+    d:"Implantes que golpean por ti, solos — también con el juego cerrado." },
+  { foco:".stat.hum", t:"HUMANIDAD",
+    d:"Cada tipo nuevo de implante te cuesta un pedazo. Si llega a cero te vuelves máquina, entra otro héroe… y tú regresas como jefe." },
+  { foco:['.tab[data-p="p-eq"]', '.tab[data-p="p-core"]'], t:"Y LO DEMÁS",
+    d:"En EQUIPO te ves de cuerpo entero. En NÚCLEOS empiezas de nuevo, más fuerte." }
+];
+
+let tutoI = -1;
+const enTuto = () => tutoI >= 0;
+
+// Rectangulo al que apunta el paso, en coordenadas de pantalla.
+function tutoCaja(foco){
+  if(foco === "objeto"){                       // el aparato, alla donde se balancee
+    const r = $("arena").getBoundingClientRect();
+    const o = posObj(), s = objVis()*0.60;
+    return { x:r.left + o.x - s, y:r.top + o.y - s, w:s*2, h:s*2, r:s };
+  }
+  const sel = Array.isArray(foco) ? foco : [foco];
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  sel.forEach(q => {
+    const e = document.querySelector(q); if(!e) return;
+    const b = e.getBoundingClientRect();
+    x0 = Math.min(x0, b.left); y0 = Math.min(y0, b.top);
+    x1 = Math.max(x1, b.right); y1 = Math.max(y1, b.bottom);
+  });
+  if(x1 < x0) return null;
+  const m = 6;                                  // un respiro alrededor
+  return { x:x0-m, y:y0-m, w:x1-x0+m*2, h:y1-y0+m*2, r:14 };
+}
+
+function tutoColocar(){
+  const P = TUTO[tutoI]; if(!P) return;
+  const c = tutoCaja(P.foco); if(!c) return;
+  const f = $("tutoFoco");
+  f.style.left = c.x + "px"; f.style.top = c.y + "px";
+  f.style.width = c.w + "px"; f.style.height = c.h + "px";
+  f.style.borderRadius = c.r + "px";
+
+  const n = $("tutoNube"), rab = $("tutoRabo");
+  const nb = n.getBoundingClientRect();
+  const W = window.innerWidth, H = window.innerHeight;
+  const cx = c.x + c.w/2;
+  /* El lado se elige por el hueco que queda de verdad, no por la mitad de la
+     pantalla en la que caiga el objetivo: con la regla facil, la nube acababa
+     tapando justo lo que estaba señalando (la barra de vida y la humanidad). */
+  const arriba = c.y - 20, abajo = H - (c.y + c.h) - 20;
+  const cabeAbajo = abajo >= nb.height + 12, cabeArriba = arriba >= nb.height + 12;
+  const debajo = cabeAbajo && (!cabeArriba || abajo >= arriba);
+  const ny = debajo ? Math.min(c.y + c.h + 20, H - nb.height - 12)
+                    : Math.max(c.y - nb.height - 20, 12);
+  const nx = clamp(cx - nb.width/2, 12, Math.max(12, W - nb.width - 12));
+  n.style.left = nx + "px"; n.style.top = ny + "px";
+  // El rabito apunta al centro del objetivo, pero sin salirse de la nube.
+  const rx = clamp(cx - 11, nx + 18, nx + nb.width - 40);
+  rab.style.left = rx + "px";
+  rab.style.top  = (debajo ? ny - 9 : ny + nb.height - 13) + "px";
+  rab.style.borderWidth = debajo ? "4px 0 0 4px" : "0 4px 4px 0";
+}
+
+function tutoIr(i){
+  if(i >= TUTO.length){ tutoFin(); return; }
+  tutoI = i;
+  const P = TUTO[i];
+  $("tutoTit").textContent = P.t;
+  $("tutoTxt").textContent = P.d;
+  $("tutoPaso").textContent = (i+1) + " / " + TUTO.length;
+  const sig = $("tutoSig");
+  sig.textContent = P.espera === "golpe" ? "GOLPEA" : (i === TUTO.length-1 ? "EMPEZAR" : "SIGUIENTE");
+  sig.classList.toggle("espera", !!P.espera);
+  $("tuto").classList.toggle("libre", !!P.espera);   // deja pasar el dedo
+  $("tuto").classList.toggle("sigue", P.foco === "objeto");
+  $("tuto").classList.add("on");
+  tutoColocar();
+}
+
+function tutoIniciar(){
+  if(document.getElementById("parte")) { setTimeout(tutoIniciar, 900); return; }
+  cerrarPanel();
+  tutoIr(0);
+}
+
+function tutoFin(){
+  tutoI = -1;
+  $("tuto").classList.remove("on", "libre", "sigue");
+  S.tuto = 1; guardar();
+}
+
+// El unico paso que exige hacer algo: se cierra desde `golpear`.
+function tutoGolpeDado(){
+  if(enTuto() && TUTO[tutoI].espera === "golpe") setTimeout(() => tutoIr(tutoI + 1), 260);
+}
+
+$("tutoCap").onclick = () => { if(enTuto() && !TUTO[tutoI].espera) tutoIr(tutoI + 1); };
+$("tutoSig").onclick = e => { e.stopPropagation(); if(!TUTO[tutoI].espera) tutoIr(tutoI + 1); };
+$("tutoSalt").onclick = e => { e.stopPropagation(); tutoFin(); };
+$("verTuto").onclick = () => tutoIniciar();
+window.addEventListener("resize", () => { if(enTuto()) tutoColocar(); });
+
 /* ---------- 25. ARRANQUE ---------- */
 if(location.search.indexOf("variantes") >= 0){
   construir(); hojaVariantes();
@@ -7161,7 +7522,9 @@ nuevasMordidas();
 pintarAparato();
 construir();
 refrescar();
-if(!habia) setTimeout(() => toast("Golpea el aparato.<br>Cada puñetazo es chatarra."), 600);
+/* La guia sale sola la primera vez. Con `?tuto` en la URL se puede volver a
+   ver sin borrar la partida, y desde NUCLEOS hay boton para repetirla. */
+if(!S.tuto || location.search.indexOf("tuto") >= 0) setTimeout(tutoIniciar, 700);
 setInterval(guardar, 5000);
 
 /* `beforeunload` NO se dispara en moviles al cambiar de app ni al cerrarla, que
