@@ -2822,85 +2822,190 @@ const DIB = {
 /* ---------- 10. ESCENARIO ---------- */
 let siluCache = {}, sueloCache = {}, desguaceCache = {}, ruinasCache = {};
 
-/* ---------- PLANOS DE FONDO ----------
-   El fondo tenia dos capas y las dos igual de nitidas, asi que se leia como un
-   telon pintado. Con cuatro planos y desenfoque creciente hacia el fondo, el
-   ojo separa las distancias solo.
+/* ---------- PLANOS DE PROFUNDIDAD ----------
+   El primer intento no se notaba, y por dos razones: el paralaje era de 26 px
+   —imperceptible— y las capas se diferenciaban SOLO en desenfoque. Eso no es
+   perspectiva, es una foto borrosa.
 
-   El desenfoque se aplica UNA vez sobre un lienzo cacheado, no en cada
-   fotograma: `ctx.filter = "blur()"` por fotograma hunde los fps en movil. Como
-   estas capas no cambian —solo se desplazan—, cachearlas sale gratis.
+   Ahora se aplican los cinco recursos que de verdad crean profundidad, y cada
+   plano los recibe TODOS a la vez:
 
-   El margen lateral existe para el paralaje: la capa se dibuja mas ancha que la
-   pantalla y se desliza dentro de ese margen sin dejar el borde al aire.       */
-const MARGEN_PAR = 60;
+   1. TAMAÑO       lo lejano es pequeño; lo cercano, enorme y cortado por el borde.
+   2. LINEA DE HORIZONTE  lo lejano se apoya en el horizonte; lo cercano crece
+                   hacia abajo y se sale de cuadro.
+   3. PERSPECTIVA AEREA   con la distancia baja el contraste y el color se lava
+                   hacia el del cielo. Lo lejano casi no es una silueta, es niebla.
+   4. PARALAJE     lo cercano se desplaza MUCHO; lo lejano, casi nada. La
+                   diferencia entre planos es lo que el ojo lee como distancia.
+   5. PROFUNDIDAD DE CAMPO   se desenfoca lo muy lejano Y lo muy cercano. Un
+                   primer plano nitido delata que es un dibujo pegado.
+
+   Y hay un PRIMER PLANO delante de todo, pegado a los bordes: es el recurso que
+   hace que un fondo de pantalla con paralaje se sienta tridimensional. Sin algo
+   por delante, solo hay capas alejandose.                                     */
+
+const PLANOS = [
+  // d: distancia (0 = pegado a la camara)   par: cuanto se desplaza
+  {d:5, blur:7.0, lav:0.80, alfa:0.85, par:0.06, n:22, anc:0.030, alt:0.16, base:0.00},
+  {d:4, blur:4.2, lav:0.62, alfa:0.90, par:0.16, n:16, anc:0.045, alt:0.26, base:0.01},
+  {d:3, blur:2.4, lav:0.44, alfa:0.94, par:0.32, n:12, anc:0.070, alt:0.40, base:0.03},
+  {d:2, blur:1.0, lav:0.24, alfa:1.00, par:0.55, n: 8, anc:0.110, alt:0.62, base:0.06}
+];
+/* El margen tiene que cubrir el desplazamiento MAXIMO del plano que mas se
+   mueve, o al deslizarse deja el borde del lienzo al aire. Maximo de camaraX:
+   62 + 26 + 115 + 110 = 313 px; el frente lo multiplica por 0.95 -> 297. Con 340
+   sobra en todos. */
+const MARGEN_PAR = 340;
 let fondoCache = {};
 
-function capaFondo(zi, plano){
-  const k = zi + "_" + plano + "_" + Math.round(CW) + "x" + Math.round(HOR);
+/* Camara. Se mueve SIEMPRE: una deriva lenta de fondo —como el pulso de una
+   mano sosteniendo el movil— mas la oscilacion de la carga y un tiron en cada
+   golpe. Si solo reaccionara al golpe, entre clic y clic el fondo estaria
+   congelado y no habria nada que leer como profundidad.                       */
+let camGolpe = 0, camGolpeV = 0;
+
+/* La camara se mueve por tres motivos a la vez, y hacen falta los tres:
+
+   DERIVA    dos senoidales de periodo distinto, que no se repiten a la vez. Es
+             el pulso de una mano sosteniendo el movil: sin esto, entre clic y
+             clic el fondo esta congelado y no hay nada que leer como
+             profundidad.
+   OSCILACION  la carga colgando arrastra la vista.
+   GOLPE     cada puñetazo da un empujon lateral que vuelve con muelle. Es lo
+             que ata el fondo a lo que estas haciendo. */
+function camaraX(){
+  return Math.sin(reloj*0.21)*62 + Math.sin(reloj*0.37 + 1.3)*26
+       + Math.sin(pend)*115 + camGolpe;
+}
+function camaraY(){
+  return Math.sin(reloj*0.16 + 0.7)*17 + Math.cos(pend)*7;
+}
+
+function capaFondo(zi, i){
+  const P = PLANOS[i];
+  const k = zi + "_" + i + "_" + Math.round(CW) + "x" + Math.round(HOR);
   if(fondoCache[k]) return fondoCache[k];
 
-  const W = Math.max(2, Math.round(CW + MARGEN_PAR*2)), H = Math.max(2, Math.round(HOR + 4));
+  const W = Math.max(2, Math.round(CW + MARGEN_PAR*2));
+  const H = Math.max(2, Math.round(CH));
   const c = document.createElement("canvas"); c.width = W; c.height = H;
   const g = c.getContext("2d");
-  const z = ZONAS[zi], r = prng(zi*911 + plano*37 + 5);
+  const z = ZONAS[zi], r = prng(zi*911 + i*137 + 5);
 
-  // Cada plano, mas lejos y mas descolorido: la bruma se come el contraste.
-  const lav = [0.62, 0.42, 0.24][plano];
-  const col  = mezcla(z.silu,  z.cielo[0], lav);
-  const col2 = mezcla(z.silu2, z.cielo[0], lav);
-  const alto = [0.30, 0.42, 0.56][plano];
-  const n    = [9, 13, 16][plano];
+  // Perspectiva aerea: el color se lava hacia el del cielo con la distancia.
+  const col  = mezcla(z.silu,  z.cielo[0], P.lav);
+  const col2 = mezcla(z.silu2, z.cielo[0], P.lav);
+  const luz  = mezcla(z.luz,   z.cielo[0], P.lav*0.85);
 
   g.save();
   g.translate(MARGEN_PAR, 0);
-  for(let i=0;i<n;i++){
-    const x = (i + r()*0.9) / (n-1) * CW;
-    const w = CW*(0.05 + r()*0.09), h = HOR*alto*(0.55 + r()*0.75);
+  for(let j=0;j<P.n;j++){
+    const x = (j + r()*0.85) / (P.n - 1) * CW;
+    const w = CW*P.anc*(0.6 + r()*0.9);
+    const h = HOR*P.alt*(0.5 + r()*0.9);
+    // Los planos lejanos se apoyan en el horizonte; los cercanos bajan de el.
+    const pie = HOR + (CH - HOR)*P.base*(0.4 + r()*1.2);
+    const c1 = j % 3 ? col : col2;
+
     if(z.horiz === "chatarra" || z.horiz === "monolitos"){
-      g.fillStyle = i % 3 ? col : col2;
-      g.beginPath();
-      g.moveTo(x - w, HOR); g.lineTo(x - w*0.3, HOR - h*0.7);
-      g.lineTo(x + w*0.2, HOR - h); g.lineTo(x + w*0.7, HOR - h*0.45);
-      g.lineTo(x + w, HOR); g.closePath(); g.fill();
+      g.fillStyle = c1; g.beginPath();
+      g.moveTo(x - w, pie); g.lineTo(x - w*0.34, pie - h*0.68);
+      g.lineTo(x + w*0.18, pie - h); g.lineTo(x + w*0.66, pie - h*0.42);
+      g.lineTo(x + w, pie); g.closePath(); g.fill();
     } else {
-      rr(g, x - w/2, HOR - h, w, h, i % 3 ? col : col2, 1);
-      if(plano < 2 && r() > 0.5){                 // alguna antena en los medios
-        ln(g, x, HOR - h, x, HOR - h - HOR*0.05, col2, Math.max(1, CW*0.004));
+      rr(g, x - w/2, pie - h, w, h, c1, Math.max(1, w*0.06));
+      // Densidad de detalle: solo los planos cercanos tienen ventanas. En los
+      // lejanos el ojo no las resolveria, y ponerlas los acerca.
+      if(P.d <= 3){
+        g.globalAlpha = 0.5;
+        for(let f = 0; f < h*0.8; f += Math.max(5, h*0.13)){
+          for(let q = 0; q < 2; q++)
+            g.fillRect(x - w*0.28 + q*w*0.34, pie - h + f + h*0.12, w*0.20, Math.max(1.5, h*0.035));
+        }
+        g.globalAlpha = 1;
+      }
+      if(P.d <= 4 && r() > 0.62)
+        ln(g, x, pie - h, x, pie - h - HOR*0.045, col2, Math.max(1, CW*0.004));
+      if(P.d <= 3 && r() > 0.7){                 // alguna luz encendida
+        g.globalAlpha = 0.6; ci(g, x, pie - h - HOR*0.05, Math.max(1.5, CW*0.005), luz);
+        g.globalAlpha = 1;
       }
     }
   }
   g.restore();
 
-  // Desenfoque: mas fuerte cuanto mas lejos. Se hace una sola vez, aqui.
-  const desenf = [1.2, 3.0, 5.5][plano];
+  // Profundidad de campo: una pasada, cacheada. Por fotograma hunde los fps.
   const c2 = document.createElement("canvas"); c2.width = W; c2.height = H;
   const g2 = c2.getContext("2d");
-  if(typeof g2.filter !== "undefined"){
-    g2.filter = "blur(" + desenf + "px)";
+  if(typeof g2.filter !== "undefined" && P.blur > 0.05){
+    g2.filter = "blur(" + P.blur + "px)";
     g2.drawImage(c, 0, 0);
     g2.filter = "none";
-  } else {
-    g2.drawImage(c, 0, 0);                        // sin soporte: se queda nitido
-  }
+  } else g2.drawImage(c, 0, 0);
 
   fondoCache[k] = c2;
   return c2;
 }
 
-/* Paralaje: cuando la carga oscila a un lado, el fondo se desplaza al otro y
-   cada plano un poco menos que el de delante. Es lo que convierte capas planas
-   en profundidad de verdad. */
 function dibujarPlanos(g, zi){
-  const base = Math.sin(pend) * 26;
-  [2, 1, 0].forEach(plano => {                    // del mas lejano al mas cercano
-    const c = capaFondo(zi, plano);
-    const f = [0.55, 0.34, 0.18][plano];          // el fondo se mueve MENOS
-    g.globalAlpha = [0.95, 0.8, 0.62][plano];
-    g.drawImage(c, -MARGEN_PAR + base*f, 0);
-  });
+  const cx = camaraX(), cy = camaraY();
+  for(let i = 0; i < PLANOS.length; i++){           // del mas lejano al mas cercano
+    const P = PLANOS[i], c = capaFondo(zi, i);
+    g.globalAlpha = P.alfa;
+    g.drawImage(c, -MARGEN_PAR + cx*P.par, cy*P.par*0.5);
+  }
   g.globalAlpha = 1;
 }
+
+/* ---------- PRIMER PLANO ----------
+   Chatarra colosal pegada a los bordes, POR DELANTE de todo, muy desenfocada y
+   con el paralaje mas fuerte. Es la pieza que convierte "capas que se alejan" en
+   "estoy dentro de un sitio". Vive en los bordes a proposito: en el centro
+   taparia la pelea.                                                           */
+let frenteCache = {};
+function capaFrente(zi){
+  const k = zi + "_" + Math.round(CW) + "x" + Math.round(CH);
+  if(frenteCache[k]) return frenteCache[k];
+
+  const W = Math.max(2, Math.round(CW + MARGEN_PAR*2)), H = Math.max(2, Math.round(CH));
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const g = c.getContext("2d");
+  const z = ZONAS[zi], r = prng(zi*577 + 91);
+  const col  = mezcla(z.silu2, "#0d0925", 0.55);
+  const col2 = mezcla(z.silu2, "#0d0925", 0.35);
+
+  g.save(); g.translate(MARGEN_PAR, 0);
+  // dos masas laterales, cortadas por el borde: se salen de cuadro
+  [-0.10, 1.10].forEach((lado, idx) => {
+    const x = lado*CW, w = CW*(0.30 + r()*0.14), h = CH*(0.52 + r()*0.30);
+    rr(g, x - w/2, CH - h, w, h + 20, idx ? col2 : col, CW*0.05);
+    for(let f = 0; f < 5; f++)
+      rr(g, x - w*0.30, CH - h + h*0.12 + f*h*0.17, w*0.60, h*0.05,
+         mezcla(idx ? col2 : col, "#000000", 0.35), 4);
+  });
+  // un par de piezas sueltas abajo, muy grandes
+  for(let j=0;j<3;j++){
+    const x = CW*(0.12 + r()*0.76), w = CW*(0.14 + r()*0.12), h = w*(0.5 + r()*0.5);
+    g.save(); g.translate(x, CH - h*0.1); g.rotate((r()-0.5)*0.9);
+    rr(g, -w/2, -h/2, w, h, col, w*0.12);
+    g.restore();
+  }
+  g.restore();
+
+  const c2 = document.createElement("canvas"); c2.width = W; c2.height = H;
+  const g2 = c2.getContext("2d");
+  if(typeof g2.filter !== "undefined"){ g2.filter = "blur(9px)"; g2.drawImage(c,0,0); g2.filter = "none"; }
+  else g2.drawImage(c,0,0);
+
+  frenteCache[k] = c2;
+  return c2;
+}
+function dibujarFrente(g, zi){
+  g.globalAlpha = 0.55;
+  g.drawImage(capaFrente(zi), -MARGEN_PAR + camaraX()*0.95, camaraY()*0.9);
+  g.globalAlpha = 1;
+}
+
 /* ---------- RUINAS DE MEGAESTRUCTURA ----------
    Capa intermedia entre el horizonte lejano y la bruma. El sitio tenia siluetas
    limpias de ciudad; esto le pone lo que quedo DESPUES de la guerra: torres
@@ -4734,7 +4839,7 @@ function redim(forzar){
   // pieza con la que se juega. Sube de 0.42·W a 0.55·W del cuerpo.
   punoR = objS*0.142;
 
-  fondoCache = {};                    // cambio el tamaño: hay que rehacer las capas
+  fondoCache = {}; frenteCache = {};  // cambio el tamaño: hay que rehacer las capas
   initMotas();
 }
 window.addEventListener("resize", () => redim(true));
@@ -5119,6 +5224,7 @@ function golpear(px, py){
   const offX = (ix - o.x)/SV, offY = (iy - o.y)/SV;
   const fza = demol ? 2.6 : crit ? 1.7 : 1.0;
   pendV += offX * 5.2 * fza;          // se va del lado CONTRARIO al golpe
+  camGolpeV += offX * 190 * fza;      // y la camara acusa el impacto
   // El lado golpeado se hunde: giro sobre el eje vertical segun donde caiga el
   // dedo en horizontal, y sobre el horizontal segun la altura.
   vGirY += offX * 13 * fza;
@@ -5970,6 +6076,8 @@ function dibujar(dt){
   dibujarPunos(ctx);
   dibujarChispa(ctx);
 
+  dibujarFrente(ctx, zi);        // chatarra colosal, delante de la accion
+
   nums.forEach(n => {
     ctx.globalAlpha = n.life > .35 ? 1 : n.life*2.8;
     texto(ctx, n.txt, n.x, n.y, n.esc, n.col, "#1b1440");
@@ -6069,6 +6177,11 @@ function frame(now){
   if(destello < .02) destello = 0;
   if(grito){ grito.life -= dt; if(grito.life <= 0) grito = null; }
   if(spawn > 0) spawn = Math.max(0, spawn - dt*3.4);
+
+  // Muelle del empujon de camara: vuelve al centro rebotando.
+  camGolpeV += (0 - camGolpe)*70*dt; camGolpeV -= camGolpeV*Math.min(1, 7*dt);
+  camGolpe += camGolpeV*dt;
+  camGolpe = clamp(camGolpe, -110, 110);
 
   animarBanco(dtR);
 
