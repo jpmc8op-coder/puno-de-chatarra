@@ -5173,6 +5173,21 @@ function pintarAparato(){
     }
   }
   const LS = 220*SS;
+
+  /* Bruma de profundidad: al retroceder en Z, al objeto se lo come el aire y su
+     color se lava hacia el del cielo. Va AQUI, sobre el sprite, porque es el
+     unico sitio donde `source-atop` se recorta al objeto: sobre el lienzo de
+     pantalla el destino es la escena entera y rellenaba un rectangulo. */
+  if(zObj > 0.02){
+    og.setTransform(1,0,0,1,0,0);
+    og.globalAlpha = Math.min(0.42, zObj*0.66);
+    og.globalCompositeOperation = "source-atop";
+    og.fillStyle = zonaDe(S.lvl).cielo[0];
+    og.fillRect(0, 0, LS, LS);
+    og.globalCompositeOperation = "source-over";
+    og.globalAlpha = 1;
+  }
+
   ug.setTransform(1,0,0,1,0,0);
   ug.clearRect(0,0,LS,LS);
   ug.drawImage(OFF,0,0);
@@ -6216,14 +6231,6 @@ function dibujar(dt){
     ctx.drawImage(OUT, X0-B, X0, S0, S0); ctx.drawImage(OUT, X0+B, X0, S0, S0);
     ctx.drawImage(OUT, X0, X0-B, S0, S0); ctx.drawImage(OUT, X0, X0+B, S0, S0);
     ctx.drawImage(OFF, X0, X0, S0, S0);
-    if(zObj > 0.02){                       // se lo come la bruma al alejarse
-      ctx.save();
-      ctx.globalAlpha = Math.min(0.42, zObj*0.66);
-      ctx.globalCompositeOperation = "source-atop";
-      ctx.fillStyle = zonaDe(S.lvl).cielo[0];
-      ctx.fillRect(X0, X0, S0, S0);
-      ctx.restore();
-    }
     if(flash > 0){
       ctx.globalAlpha = Math.min(1, flash*7);
       ctx.drawImage(FLS, X0, X0, S0, S0);

@@ -863,6 +863,24 @@ también quedaba descolgada. Corregidas las dos cosas, el error es **0 px en tod
 el arco**. Ojo: `posObj()` la usan también `destPuno()` y los impactos, así que
 el fallo desviaba el blanco de los puños, no solo la sombra.
 
+## `source-atop` se recorta al DESTINO, no al objeto
+
+Trampa que costó dos rondas y un recuadro amarillo visible en pantalla.
+
+La bruma de profundidad —lavar el objeto hacia el color del cielo al retroceder
+en Z— se aplicaba con `source-atop` **sobre el lienzo principal**. Pero ahí el
+destino es la escena entera: cielo y suelo lo cubren todo, así que el relleno no
+se recortaba a nada y pintaba **el rectángulo completo** del sprite. En el
+sector 1 el color de cielo es naranja: de ahí el recuadro amarillo al golpear.
+
+> **La regla:** `source-atop` solo sirve de máscara si el lienzo contiene
+> únicamente aquello a lo que quieres recortar. Sobre `og` (el sprite del
+> aparato) funciona; sobre `ctx` (la pantalla) no enmascara nada.
+
+Movida a `pintarAparato`, sobre `og`. Comprobado midiendo píxeles: dentro del
+objeto el color se lava 94 unidades hacia el cielo, y **la esquina vacía del
+sprite mantiene alfa 0**.
+
 ## Guardar de verdad en móvil
 
 `beforeunload` **no se dispara en móviles** al cambiar de app ni al cerrarla —
