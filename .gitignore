@@ -1,0 +1,18 @@
+# Empaquetado nativo (Capacitor)
+node_modules/
+ios/
+
+# `www/` y `assets/` se generan con dev/preparar-www.ps1 a partir de la raiz.
+www/
+assets/
+
+# El proyecto Android SI se versiona: lleva ajustes propios (orientacion
+# vertical en AndroidManifest.xml). Lo que se ignora es lo que genera Gradle.
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+
+# Salida de compilacion
+_apk/
+_apk-build.log

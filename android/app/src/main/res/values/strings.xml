@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Puño de Chatarra</string>
+    <string name="title_activity_main">Puño de Chatarra</string>
+    <string name="package_name">com.jpmedina.chatarra</string>
+    <string name="custom_url_scheme">com.jpmedina.chatarra</string>
+</resources>

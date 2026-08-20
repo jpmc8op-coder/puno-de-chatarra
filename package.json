@@ -1,0 +1,17 @@
+{
+  "name": "puno-de-chatarra",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Clicker de demolición: rompe chatarra a puñetazos en un mundo que ganó la guerra contra las máquinas.",
+  "scripts": {
+    "www": "powershell -ExecutionPolicy Bypass -File dev/preparar-www.ps1",
+    "sync": "npm run www && npx cap copy && npx cap sync",
+    "android": "npm run sync && npx cap open android",
+    "apk": "npm run sync && powershell -ExecutionPolicy Bypass -File dev/compilar-apk.ps1"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0"
+  }
+}
