@@ -6904,12 +6904,16 @@ function radioChispa(){ return 26*U; }
 /* La NODRIZA. El enjambre no viaja en una caja: viaja enganchado al casco. Un
    hexagono con seis crias acopladas se distingue de un cuadricoptero con carga
    incluso de refilon, que es cuando hay que decidir si vale la pena ir a por el. */
-function dibujarNodriza(g, r, fin){
+function dibujarNodriza(g, r0, fin){
   const OSC = "#150f33", MET = "#b9c2cc", MET_D = "#5a6285", CY = "#22e6ff";
+  /* Va algo mas chica que el cuadricoptero: el hexagono es una mancha maciza y
+     el otro es casi todo aire, asi que al mismo radio este parecia el doble.
+     En un movil, donde el aparato ya llena la pantalla, se notaba mucho. */
+  const r = r0*0.82;
 
   // halo propio, mas frio que el de los otros
-  g.globalAlpha = fin * (0.30 + Math.sin(reloj*9)*0.10);
-  ci(g, 0, 0, r*3.1, CY);
+  g.globalAlpha = fin * (0.26 + Math.sin(reloj*9)*0.09);
+  ci(g, 0, 0, r*2.6, CY);
   g.globalAlpha = fin;
 
   // casco hexagonal
