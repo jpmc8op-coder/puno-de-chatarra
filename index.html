@@ -49,7 +49,29 @@ body{
   text-shadow:0 0 12px currentColor}
 .stat span{font-size:10px;letter-spacing:1.2px;color:#cbb9ff;text-transform:uppercase;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.stat.scrap b{color:var(--amber)} .stat.dps b{color:var(--cyan)}
+/* El contador de chatarra es lo que engancha: es el marcador de todo lo que
+   llevas hecho. Como una estadistica mas, del mismo tamaño que las otras
+   cuatro, no destacaba nada. Ahora manda en la barra. */
+.banco{display:flex;flex-direction:column;padding:0 12px 0 14px;min-width:0}
+.banco .bnum{display:flex;align-items:baseline;gap:6px}
+.banco b{font-size:27px;line-height:1;color:var(--amber);font-variant-numeric:tabular-nums;
+  white-space:nowrap;text-shadow:0 0 16px rgba(255,209,102,.55)}
+.banco i{font-style:normal;font-size:13px;font-weight:800;color:var(--lime);
+  opacity:0;transform:translateY(4px);transition:opacity .18s, transform .18s;white-space:nowrap}
+.banco i.on{opacity:1;transform:translateY(0)}
+.banco .bsub{font-size:10px;letter-spacing:1.6px;color:#cbb9ff;margin-top:3px;white-space:nowrap}
+.banco .bsub em{font-style:normal;color:var(--cyan)}
+/* En movil no caben el contador grande y las cuatro estadisticas: se solapaban.
+   Se quedan las dos que no estan repetidas en otro sitio — el ritmo por segundo
+   ya sale bajo el contador, y el daño por golpe y los nucleos se ven en sus
+   pestañas. */
+@media (max-width:560px){
+  .banco b{font-size:23px} .banco{padding:0 8px}
+  .stat.dmg, .stat.dps, .stat.core{display:none}
+  .stat{padding:0 8px}
+}
+@media (max-width:400px){ .banco b{font-size:20px} .banco .bsub{letter-spacing:1px} }
+.stat.dps b{color:var(--cyan)}
 .stat.dmg b{color:var(--mag)} .stat.core b{color:var(--violet)}
 .stat.hum b{color:var(--lime);transition:color .4s}
 #top .sp{flex:1}
@@ -345,7 +367,10 @@ body{
 
   <div id="top">
     <canvas id="logoCv" title="Puño de Chatarra"></canvas>
-    <div class="stat scrap"><b id="sScrap">0</b><span>chatarra</span></div>
+    <div class="banco">
+      <div class="bnum"><b id="sScrap">0</b><i id="sGan"></i></div>
+      <div class="bsub">CHATARRA <em id="sTasa"></em></div>
+    </div>
     <div class="stat dmg"><b id="sDmg">1</b><span>por golpe</span></div>
     <div class="stat dps"><b id="sDps">0</b><span>implantes/s</span></div>
     <div class="stat core"><b id="sCore">0</b><span>núcleos</span></div>
@@ -2796,6 +2821,86 @@ const DIB = {
 
 /* ---------- 10. ESCENARIO ---------- */
 let siluCache = {}, sueloCache = {}, desguaceCache = {}, ruinasCache = {};
+
+/* ---------- PLANOS DE FONDO ----------
+   El fondo tenia dos capas y las dos igual de nitidas, asi que se leia como un
+   telon pintado. Con cuatro planos y desenfoque creciente hacia el fondo, el
+   ojo separa las distancias solo.
+
+   El desenfoque se aplica UNA vez sobre un lienzo cacheado, no en cada
+   fotograma: `ctx.filter = "blur()"` por fotograma hunde los fps en movil. Como
+   estas capas no cambian —solo se desplazan—, cachearlas sale gratis.
+
+   El margen lateral existe para el paralaje: la capa se dibuja mas ancha que la
+   pantalla y se desliza dentro de ese margen sin dejar el borde al aire.       */
+const MARGEN_PAR = 60;
+let fondoCache = {};
+
+function capaFondo(zi, plano){
+  const k = zi + "_" + plano + "_" + Math.round(CW) + "x" + Math.round(HOR);
+  if(fondoCache[k]) return fondoCache[k];
+
+  const W = Math.max(2, Math.round(CW + MARGEN_PAR*2)), H = Math.max(2, Math.round(HOR + 4));
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const g = c.getContext("2d");
+  const z = ZONAS[zi], r = prng(zi*911 + plano*37 + 5);
+
+  // Cada plano, mas lejos y mas descolorido: la bruma se come el contraste.
+  const lav = [0.62, 0.42, 0.24][plano];
+  const col  = mezcla(z.silu,  z.cielo[0], lav);
+  const col2 = mezcla(z.silu2, z.cielo[0], lav);
+  const alto = [0.30, 0.42, 0.56][plano];
+  const n    = [9, 13, 16][plano];
+
+  g.save();
+  g.translate(MARGEN_PAR, 0);
+  for(let i=0;i<n;i++){
+    const x = (i + r()*0.9) / (n-1) * CW;
+    const w = CW*(0.05 + r()*0.09), h = HOR*alto*(0.55 + r()*0.75);
+    if(z.horiz === "chatarra" || z.horiz === "monolitos"){
+      g.fillStyle = i % 3 ? col : col2;
+      g.beginPath();
+      g.moveTo(x - w, HOR); g.lineTo(x - w*0.3, HOR - h*0.7);
+      g.lineTo(x + w*0.2, HOR - h); g.lineTo(x + w*0.7, HOR - h*0.45);
+      g.lineTo(x + w, HOR); g.closePath(); g.fill();
+    } else {
+      rr(g, x - w/2, HOR - h, w, h, i % 3 ? col : col2, 1);
+      if(plano < 2 && r() > 0.5){                 // alguna antena en los medios
+        ln(g, x, HOR - h, x, HOR - h - HOR*0.05, col2, Math.max(1, CW*0.004));
+      }
+    }
+  }
+  g.restore();
+
+  // Desenfoque: mas fuerte cuanto mas lejos. Se hace una sola vez, aqui.
+  const desenf = [1.2, 3.0, 5.5][plano];
+  const c2 = document.createElement("canvas"); c2.width = W; c2.height = H;
+  const g2 = c2.getContext("2d");
+  if(typeof g2.filter !== "undefined"){
+    g2.filter = "blur(" + desenf + "px)";
+    g2.drawImage(c, 0, 0);
+    g2.filter = "none";
+  } else {
+    g2.drawImage(c, 0, 0);                        // sin soporte: se queda nitido
+  }
+
+  fondoCache[k] = c2;
+  return c2;
+}
+
+/* Paralaje: cuando la carga oscila a un lado, el fondo se desplaza al otro y
+   cada plano un poco menos que el de delante. Es lo que convierte capas planas
+   en profundidad de verdad. */
+function dibujarPlanos(g, zi){
+  const base = Math.sin(pend) * 26;
+  [2, 1, 0].forEach(plano => {                    // del mas lejano al mas cercano
+    const c = capaFondo(zi, plano);
+    const f = [0.55, 0.34, 0.18][plano];          // el fondo se mueve MENOS
+    g.globalAlpha = [0.95, 0.8, 0.62][plano];
+    g.drawImage(c, -MARGEN_PAR + base*f, 0);
+  });
+  g.globalAlpha = 1;
+}
 /* ---------- RUINAS DE MEGAESTRUCTURA ----------
    Capa intermedia entre el horizonte lejano y la bruma. El sitio tenia siluetas
    limpias de ciudad; esto le pone lo que quedo DESPUES de la guerra: torres
@@ -4629,6 +4734,7 @@ function redim(forzar){
   // pieza con la que se juega. Sube de 0.42·W a 0.55·W del cuerpo.
   punoR = objS*0.142;
 
+  fondoCache = {};                    // cambio el tamaño: hay que rehacer las capas
   initMotas();
 }
 window.addEventListener("resize", () => redim(true));
@@ -5330,7 +5436,9 @@ function pinta(card, precio, puedo, cant, tope, aporte, lote){
   if(tope) card.classList.remove("no");
 }
 function refrescar(){
-  $("sScrap").textContent = fmt(S.scrap);
+  // El texto lo pone `animarBanco` en cada fotograma: aqui solo se refresca el
+  // resto. Escribirlo tambien aqui haria que pegara saltos al comprar.
+  $("sTasa").textContent = dps() > 0 ? "· " + fmt(dps()) + "/s" : "";
   $("sDmg").textContent   = fmt(golpeBase());
   $("sDps").textContent   = fmt(dps());
   $("sCore").textContent  = fmt(S.cores);
@@ -5617,6 +5725,35 @@ function dibujarRetrato(t){
   rg.drawImage(HRO,  sx, sy, sw, sh, dx, dy, dw, dh);
 }
 
+/* ---------- EL CONTADOR ----------
+   Ver subir el numero ES parte del juego: un contador que salta de golpe se lee
+   como un dato, y uno que rueda se lee como algo que estas ganando. Persigue al
+   valor real con un 12% de la diferencia por fotograma, asi que sube rapido al
+   principio y frena al llegar — igual que un cuentakilometros.               */
+let bancoVisto = 0, bancoAnt = 0, ganT = 0;
+function animarBanco(dt){
+  const e = $("sScrap"); if(!e) return;
+  const objetivo = S.scrap;
+
+  // Al comprar, el numero BAJA: eso se enseña de golpe. Rodando hacia abajo
+  // parece que el juego te esta quitando cosas poco a poco.
+  if(objetivo < bancoVisto - 1) bancoVisto = objetivo;
+  else bancoVisto += (objetivo - bancoVisto) * Math.min(1, dt * 7.5);
+  if(Math.abs(objetivo - bancoVisto) < 0.6) bancoVisto = objetivo;
+
+  const txt = fmt(Math.floor(bancoVisto));
+  if(e.textContent !== txt) e.textContent = txt;
+
+  // el pellizco de ganancia, junto al numero
+  const g = $("sGan");
+  if(g){
+    const sube = objetivo - bancoAnt;
+    if(sube > 0){ g.textContent = "+" + fmt(sube); g.classList.add("on"); ganT = 0.9; }
+    if(ganT > 0){ ganT -= dt; if(ganT <= 0) g.classList.remove("on"); }
+  }
+  bancoAnt = objetivo;
+}
+
 /* ---------- 21. RENDER ---------- */
 function dibujar(dt){
   const zi = zonaIdx(S.lvl), z = ZONAS[zi], E = estrellas(zi);
@@ -5656,6 +5793,7 @@ function dibujar(dt){
   }
   ctx.globalAlpha = 1;
 
+  dibujarPlanos(ctx, zi);                 // tres planos lejanos, desenfocados
   dibujarHorizonte(ctx, z, zi, reloj);
   dibujarRuinas(ctx, z, zi, reloj);
 
@@ -5931,6 +6069,8 @@ function frame(now){
   if(destello < .02) destello = 0;
   if(grito){ grito.life -= dt; if(grito.life <= 0) grito = null; }
   if(spawn > 0) spawn = Math.max(0, spawn - dt*3.4);
+
+  animarBanco(dtR);
 
   if(punos.length){
     punos.forEach(p => p.t += dtR);
