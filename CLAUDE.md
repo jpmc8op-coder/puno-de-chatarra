@@ -863,6 +863,30 @@ también quedaba descolgada. Corregidas las dos cosas, el error es **0 px en tod
 el arco**. Ojo: `posObj()` la usan también `destPuno()` y los impactos, así que
 el fallo desviaba el blanco de los puños, no solo la sombra.
 
+## El dedo manda: nunca sustituir el punto del jugador
+
+`golpear()` comprobaba si el toque caía dentro de la caja del sprite y, si no,
+**lo tiraba y lo sustituía por un punto al azar cerca del centro**. Por eso al
+pegarle abajo el golpe salía en el medio: no fallaba la conversión de
+coordenadas, es que se descartaba el punto.
+
+> El puño cae **exactamente** donde cae el dedo, sin excepción. Lo único que se
+> encaja dentro del sprite es la **mordida**, porque un boquete fuera del dibujo
+> no se vería. Medido en cinco posiciones, incluidas las esquinas: **0 px** de
+> desvío.
+
+## El fondo se mueve porque golpeas, no porque sí
+
+La deriva continua la puse para que entre clic y clic hubiera algo que leer como
+profundidad. Cansa y no se asocia a nada: un fondo que nunca para se vuelve
+ruido. Ahora la cámara está atada a lo que haces —la carga oscilando y el
+empujón de cada golpe— con solo un resto de deriva para que no parezca una foto
+pegada.
+
+Medido: **13 px de recorrido en 10 s en reposo** contra **158 px en los 6 s
+siguientes a un golpe** — doce veces más. En ese golpe el primer plano recorre
+182 px y el fondo lejano 8.
+
 ## `source-atop` se recorta al DESTINO, no al objeto
 
 Trampa que costó dos rondas y un recuadro amarillo visible en pantalla.

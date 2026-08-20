@@ -2884,7 +2884,7 @@ let fondoCache = {};
    mano sosteniendo el movil— mas la oscilacion de la carga y un tiron en cada
    golpe. Si solo reaccionara al golpe, entre clic y clic el fondo estaria
    congelado y no habria nada que leer como profundidad.                       */
-let camGolpe = 0, camGolpeV = 0;
+let camGolpe = 0, camGolpeV = 0, camGolpeY = 0, camGolpeYV = 0;
 
 /* La camara se mueve por tres motivos a la vez, y hacen falta los tres:
 
@@ -2896,11 +2896,12 @@ let camGolpe = 0, camGolpeV = 0;
    GOLPE     cada puñetazo da un empujon lateral que vuelve con muelle. Es lo
              que ata el fondo a lo que estas haciendo. */
 function camaraX(){
-  return Math.sin(reloj*0.21)*62 + Math.sin(reloj*0.37 + 1.3)*26
-       + Math.sin(pend)*115 + camGolpe;
+  // Un resto minimo de deriva para que no parezca una foto pegada, y el resto
+  // atado a lo que haces: la carga oscilando y el empujon de cada golpe.
+  return Math.sin(reloj*0.19)*8 + Math.sin(pend)*130 + camGolpe;
 }
 function camaraY(){
-  return Math.sin(reloj*0.16 + 0.7)*17 + Math.cos(pend)*7;
+  return Math.sin(reloj*0.15 + 0.7)*4 + Math.cos(pend)*7 + camGolpeY;
 }
 
 function capaFondo(zi, i){
@@ -5380,16 +5381,15 @@ function golpear(px, py){
 
   const o = posObj(), SV = objVis();
   // Si hay dedo, manda el dedo; si no (teclado, automatico), un punto del objeto.
-  let ix, iy, sxp = 110, syp = 110, dentro = false;
+  let ix, iy, sxp = 110, syp = 110;
   if(px !== undefined){
+    ix = px; iy = py;                       // el puño cae EXACTAMENTE en el dedo
     const q = puntoEnObjeto(px, py);
-    dentro = Math.abs(q.lx) < SV*0.46 && Math.abs(q.ly) < SV*0.46;
-    ix = dentro ? px : o.x + rnd(-1,1)*SV*0.22;
-    iy = dentro ? py : o.y + rnd(-1,1)*SV*0.22;
     sxp = clamp(q.x, 24, 196); syp = clamp(q.y, 24, 196);
   } else {
     ix = o.x + rnd(-1,1)*SV*0.24; iy = o.y + rnd(-1,1)*SV*0.24;
-    sxp = 110 + (ix-o.x)/SV*220; syp = 110 + (iy-o.y)/SV*220;
+    sxp = clamp(110 + (ix-o.x)/SV*220, 24, 196);
+    syp = clamp(110 + (iy-o.y)/SV*220, 24, 196);
   }
   mordidaCercaDe(sxp, syp);
   ojoMira = {x: sxp, y: syp};        // el jefe mira a donde le acabas de pegar
@@ -5402,7 +5402,8 @@ function golpear(px, py){
   const offX = (ix - o.x)/SV, offY = (iy - o.y)/SV;
   const fza = demol ? 2.6 : crit ? 1.7 : 1.0;
   pendV += offX * 5.2 * fza;          // se va del lado CONTRARIO al golpe
-  camGolpeV += offX * 190 * fza;      // y la camara acusa el impacto
+  camGolpeV += offX * 300 * fza;      // y la camara acusa el impacto
+  camGolpeYV += offY * 120 * fza;
   // El lado golpeado se hunde: giro sobre el eje vertical segun donde caiga el
   // dedo en horizontal, y sobre el horizontal segun la altura.
   vGirY += offX * 13 * fza;
@@ -6153,10 +6154,15 @@ function dibujar(dt){
   const oP = posObj();
   const alto = clamp((HOR - oP.y) / Math.max(1, HOR - (ancY + largoCad*0.55)), 0, 1);
   const cerca = 1 - alto*0.42;
-  ctx.globalAlpha = .34*cerca;
+  /* La sombra acompaña al retroceso en Z: cuando el objeto se hunde, ella
+     encoge, se aclara y se corre hacia el punto de fuga con el. Quedandose
+     quieta delataba que el retroceso era un truco de escala. */
+  const zc = 1 - zObj*0.34;
+  const sx2 = oP.x + (CW*0.5 - oP.x)*zObj*0.22;
+  ctx.globalAlpha = .34*cerca*zc;
   ctx.fillStyle = "#0d0925";
   ctx.beginPath();
-  ctx.ellipse(oP.x, HOR + 2*U, objVis()*.27*cerca, objVis()*.038*cerca, 0,0,6.2832);
+  ctx.ellipse(sx2, HOR + 2*U, objVis()*.27*cerca*zc, objVis()*.038*cerca*zc, 0,0,6.2832);
   ctx.fill();
   ctx.globalAlpha = 1;
 
@@ -6381,9 +6387,12 @@ function frame(now){
   if(spawn > 0) spawn = Math.max(0, spawn - dt*3.4);
 
   // Muelle del empujon de camara: vuelve al centro rebotando.
-  camGolpeV += (0 - camGolpe)*70*dt; camGolpeV -= camGolpeV*Math.min(1, 7*dt);
+  camGolpeV += (0 - camGolpe)*38*dt; camGolpeV -= camGolpeV*Math.min(1, 4.6*dt);
   camGolpe += camGolpeV*dt;
-  camGolpe = clamp(camGolpe, -110, 110);
+  camGolpe = clamp(camGolpe, -150, 150);
+  camGolpeYV += (0 - camGolpeY)*44*dt; camGolpeYV -= camGolpeYV*Math.min(1, 5.2*dt);
+  camGolpeY += camGolpeYV*dt;
+  camGolpeY = clamp(camGolpeY, -40, 40);
 
   animarBanco(dtR);
 
