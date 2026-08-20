@@ -6148,21 +6148,31 @@ function dibujar(dt){
   ci(ctx, objX - 3*U, rielY + 4*U, 1.6*U, "#2b2f45");
   ci(ctx, objX + 3*U, rielY + 4*U, 1.6*U, "#2b2f45");
 
-  // Sombra en el suelo: justo bajo el objeto. Al oscilar la carga sube, así que
-  // la sombra se encoge y se aclara — es lo que la ata al objeto en vez de
-  // dejarla como una mancha suelta.
+  /* ---- SOMBRA ----
+     Iba pegada a la linea del horizonte, y ahi no se lee como la sombra DEL
+     objeto: se lee como una mancha lejana, detras de el. Una sombra que dice
+     "esto esta encima de mi" tiene que caer en el suelo CERCANO, bien por debajo
+     del horizonte — y por estar mas cerca de la camara, se ve mas grande.
+
+     Al oscilar la carga sube, asi que la sombra se encoge y se aclara; y
+     acompaña al retroceso en profundidad corriendose hacia el punto de fuga,
+     porque quedandose quieta delataba que el retroceso era un truco de escala. */
   const oP = posObj();
   const alto = clamp((HOR - oP.y) / Math.max(1, HOR - (ancY + largoCad*0.55)), 0, 1);
   const cerca = 1 - alto*0.42;
-  /* La sombra acompaña al retroceso en Z: cuando el objeto se hunde, ella
-     encoge, se aclara y se corre hacia el punto de fuga con el. Quedandose
-     quieta delataba que el retroceso era un truco de escala. */
   const zc = 1 - zObj*0.34;
+  const suelo = HOR + (CH - HOR)*0.30;            // suelo cercano, no el horizonte
   const sx2 = oP.x + (CW*0.5 - oP.x)*zObj*0.22;
-  ctx.globalAlpha = .34*cerca*zc;
+  const sy2 = suelo - (HOR - suelo)*zObj*0.30;    // al alejarse, tira al horizonte
+  ctx.globalAlpha = .40*cerca*zc;
   ctx.fillStyle = "#0d0925";
   ctx.beginPath();
-  ctx.ellipse(sx2, HOR + 2*U, objVis()*.27*cerca*zc, objVis()*.038*cerca*zc, 0,0,6.2832);
+  ctx.ellipse(sx2, sy2, objVis()*.36*cerca*zc, objVis()*.062*cerca*zc, 0,0,6.2832);
+  ctx.fill();
+  // nucleo mas denso: una sombra plana de un solo tono parece un adhesivo
+  ctx.globalAlpha = .30*cerca*zc;
+  ctx.beginPath();
+  ctx.ellipse(sx2, sy2, objVis()*.22*cerca*zc, objVis()*.036*cerca*zc, 0,0,6.2832);
   ctx.fill();
   ctx.globalAlpha = 1;
 
