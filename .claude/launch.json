@@ -4,8 +4,23 @@
     {
       "name": "puno-de-chatarra",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8790", "--directory", "."],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8790",
+        "--directory",
+        "."
+      ],
       "port": 8790
+    },
+    {
+      "name": "lamina",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "C:\\Users\\jpmc_\\OneDrive\\Documentos\\claude code\\puno-de-chatarra\\dev\\servidor-lamina.py",
+        "8791"
+      ],
+      "port": 8791
     }
   ]
 }

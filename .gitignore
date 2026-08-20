@@ -16,3 +16,6 @@ android/local.properties
 # Salida de compilacion
 _apk/
 _apk-build.log
+
+# Las laminas de diseno se regeneran con `?lamina`; no hace falta versionarlas.
+_lamina/

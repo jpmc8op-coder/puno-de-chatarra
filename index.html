@@ -267,6 +267,8 @@ body{
   .stat{padding:0 8px}.stat b{font-size:14px}
   #combo{left:6px;width:58px}
   #frenBar{top:12px;left:6px;padding:6px 9px} #frenBar i{width:76px}
+  #enjBar{top:12px;left:6px;padding:6px 9px} #enjBar i{width:76px}
+  #frenBar.on ~ #enjBar.on{top:68px}
   #zone .zt{font-size:16px}
   #retrato{height:260px}
 }
@@ -296,6 +298,17 @@ body{
 #frenBar.on{display:block;animation:frenPulso .5s infinite}
 @keyframes frenPulso{50%{background:rgba(120,80,10,.95)}}
 #frenBar b{display:block;font-size:12px;font-weight:900;color:var(--amber);letter-spacing:1.5px}
+/* Mismo aviso para el enjambre: sin el, multiplicar por cinco la produccion no
+   se veia en ninguna parte y el bono parecia no hacer nada. */
+#enjBar{position:absolute;top:14px;left:10px;bottom:auto;z-index:5;pointer-events:none;display:none;
+  background:linear-gradient(160deg,#0f3f52,#0a2836);border:3px solid var(--cyan);
+  border-radius:16px;padding:7px 11px;box-shadow:0 4px 0 rgba(0,0,0,.4)}
+#enjBar.on{display:block;animation:frenPulso .5s infinite}
+#enjBar b{display:block;font-size:12px;font-weight:900;color:var(--cyan);letter-spacing:1.5px}
+#enjBar i{display:block;height:6px;width:96px;background:#0d0925;border-radius:4px;
+  overflow:hidden;margin-top:4px}
+#enjBar i em{display:block;height:100%;background:var(--cyan);width:100%}
+#frenBar.on ~ #enjBar.on{top:76px}
 #frenBar i{display:block;height:7px;background:#0d0925;margin-top:6px;width:110px;
   overflow:hidden;border-radius:4px}
 #frenBar i em{border-radius:4px}
@@ -393,7 +406,8 @@ body{
       <div id="comboBar"><i id="comboI"></i></div>
     </div>
     <div id="meta"><i><em id="metaB"></em></i></div>
-    <div id="frenBar"><b>SOBRECARGA</b><i><em id="frenB"></em></i></div>
+    <div id="frenBar"><b id="frenTit">SOBRECARGA</b><i><em id="frenB"></em></i></div>
+    <div id="enjBar"><b id="enjTit">ENJAMBRE</b><i><em id="enjB"></em></i></div>
     <div id="hud">
       <div id="hpwrap">
         <div id="hpbar"><div id="hpfill"></div></div>
@@ -945,8 +959,15 @@ const NEW = () => ({
 });
 let S = NEW();
 
+/* El aviso de instalacion de Chrome. Se declara AQUI y no junto a su listener,
+   al final, porque `construir()` lo consulta para enseñar u ocultar el boton: si
+   la declaracion queda detras, cualquier arranque que no llegue al final —los
+   modos de herramienta, por ejemplo— peta con un TDZ. */
+let instalador = null;
+
 /* ---------- 7. FÓRMULAS ---------- */
-let enjambre = 0;                     // segundos de implantes multiplicados
+let enjambre = 0, enjambreMax = 20;   // segundos de implantes multiplicados
+let frenesiMax = 12;                  // dura distinto segun de donde venga
 const MULT_ENJAMBRE = 5;
 const multEnjambre = () => (enjambre > 0 ? MULT_ENJAMBRE : 1);
 const esJefe = n => n % 10 === 0;
@@ -4888,8 +4909,11 @@ let mordidas = [], parts = [], nums = [], shake = 0, flash = 0,
 // que multiplica el golpe manual. Es el enganche activo del genero.
 const MULT_FRENESI = 6;
 const enFrenesi = () => frenesi > 0;
+// El aviso lleva el multiplicador real: si se toca la constante, el cartel sigue.
+$("frenTit").textContent = "SOBRECARGA x" + MULT_FRENESI;
+$("enjTit").textContent  = "ENJAMBRE x"  + MULT_ENJAMBRE;
 function lanzarFrenesi(){
-  frenesi = 12;
+  frenesi = frenesiMax = 12;
   destello = 1; destelloCol = "#ffe14d";
   shake = Math.max(shake, 5*U);
   gritar("SOBRECARGA x" + MULT_FRENESI, "#ffe14d", 13, 2, 2.2);
@@ -5739,7 +5763,9 @@ function refrescar(){
   } else $("meta").style.display = "none";
 
   $("frenBar").classList.toggle("on", frenesi > 0);
-  if(frenesi > 0) $("frenB").style.width = (frenesi/12*100) + "%";
+  $("enjBar").classList.toggle("on", enjambre > 0);
+  if(enjambre > 0) $("enjB").style.width = (enjambre/enjambreMax*100) + "%";
+  if(frenesi > 0) $("frenB").style.width = (frenesi/frenesiMax*100) + "%";
 
   const lb = $("logrosBox");
   if(lb){
@@ -6185,17 +6211,31 @@ function dibujar(dt){
     ctx.translate(Math.round(objX), Math.round(ancY));
     ctx.rotate(pend);
 
-    // cadena: los jefes pesan y cuelgan de dos
+    /* Adonde va a acabar el objeto tras el retroceso. Se calcula ANTES de
+       dibujar la cadena para que ella pueda seguirlo. */
+    const enc = zObj > 0.001 ? 1 - zObj*0.30 : 1;
+    const oAct = posObj();
+    const dzx = zObj > 0.001 ? (CW*0.5 - oAct.x)*zObj*0.22 : 0;
+    const dzy = zObj > 0.001 ? (HOR  - oAct.y)*zObj*0.20 : 0;
+    const finY = L + dzy;
+
+    // cadena: del gancho fijo al objeto, adelgazando con la distancia
     const esl = Math.max(3, Math.round(4*U));
     const ramas = jefe ? [-4*U, 4*U] : [0];
     ramas.forEach(ox => {
-      for(let y = 0; y < L - SV*0.42; y += esl){
-        rr(ctx, ox-1.6*U, y, 3.2*U, esl*0.72, y % (esl*2) < esl ? "#8d97b8" : "#5a6285", U*0.5);
+      const hasta = finY - SV*0.42*enc;
+      const n = Math.max(1, Math.floor(hasta / esl));
+      for(let i = 0; i < n; i++){
+        const t2 = i/n;                       // 0 en el gancho, 1 en el objeto
+        const y  = t2*hasta;
+        const x  = ox + dzx*t2;               // se va con el objeto
+        const w  = (1 - t2*(1-enc));          // y adelgaza al alejarse
+        rr(ctx, x-1.6*U*w, y, 3.2*U*w, esl*0.72, i % 2 ? "#8d97b8" : "#5a6285", U*0.5);
       }
-      rr(ctx, ox-2.6*U, L - SV*0.44, 5.2*U, 4*U, "#8d97b8", U*0.8);
+      rr(ctx, ox + dzx - 2.6*U*enc, finY - SV*0.44*enc, 5.2*U*enc, 4*U*enc, "#8d97b8", U*0.8);
     });
 
-    ctx.translate(0, L);
+    ctx.translate(dzx, finY);
     if(jefe){
       ctx.translate(Math.sin(reloj*13)*0.7*U, Math.cos(reloj*11)*0.7*U);   // vibra
       const vida = clamp(S.hp/maxHp(S.lvl), 0, 1);
@@ -6204,15 +6244,9 @@ function dibujar(dt){
       const pulso = 1 + Math.sin(reloj*(2.2 + (1-vida)*5))*(0.018 + (1-vida)*0.05);
       ctx.scale(pulso, 2 - pulso);
     }
-    /* Perspectiva en Z: al alejarse, un objeto MENGUA y se desplaza hacia el
-       punto de fuga —que aqui esta en el horizonte, al centro—. Las dos cosas a
-       la vez; solo con la escala pareceria que encoge, no que se aleja. */
-    if(zObj > 0.001){
-      const enc = 1 - zObj*0.30;
-      const oAct = posObj();
-      ctx.translate((CW*0.5 - oAct.x)*zObj*0.22, (HOR - oAct.y)*zObj*0.20);
-      ctx.scale(enc, enc);
-    }
+    // El desplazamiento ya lo hizo el translate de arriba, junto con la cadena;
+    // aqui solo queda menguar.
+    if(enc !== 1) ctx.scale(enc, enc);
     ctx.rotate(tilt);
     /* TRIDIMENSIONALIDAD.
        El aparato es plano, pero al recibir el golpe gira sobre sus ejes como si
@@ -6649,7 +6683,7 @@ function parteDeRegreso(seg, gan, destr, nivel0){
 let chispa = null, proxChispa = 55 + Math.random()*70;
 
 const BONOS = [
-  {id:"sobrecarga", n:"SOBRECARGA", d:"x7 por golpe durante 15 s", col:"#ffe14d", peso:34},
+  {id:"sobrecarga", n:"SOBRECARGA", d:"x6 por golpe durante 15 s", col:"#ffe14d", peso:34},
   {id:"botin",      n:"BOTÍN",      d:"chatarra de golpe",         col:"#a6ff4d", peso:30},
   {id:"enjambre",   n:"ENJAMBRE",   d:"implantes x5 durante 20 s", col:"#22e6ff", peso:26},
   {id:"nucleo",     n:"NÚCLEO SUELTO", d:"+1 núcleo, para siempre", col:"#ff3ea5", peso:10}
@@ -6657,9 +6691,13 @@ const BONOS = [
 
 function nacerChispa(){
   const m = 60*U;
+  // El bono se sortea AL NACER, no al cazarlo, para poder enseñarlo en la caja.
+  const tot = BONOS.reduce((a,b) => a + b.peso, 0);
+  let v = Math.random()*tot, b = BONOS[0];
+  for(const o of BONOS){ v -= o.peso; if(v <= 0){ b = o; break; } }
   chispa = { x: Math.random() < .5 ? -m : CW + m,
              y: HOR*0.30 + Math.random()*HOR*0.45,
-             vida: 9, max: 9, fase: Math.random()*6.28 };
+             vida: 9, max: 9, fase: Math.random()*6.28, bono: b };
   chispa.vx = (chispa.x < 0 ? 1 : -1) * (CW + 2*m)/9;
   sfx("chispa");
 }
@@ -6739,10 +6777,30 @@ function dibujarChispa(g){
   g.translate(0, r*1.05); g.rotate(bal);
   ln(g, 0, 0, 0, r*1.10, MET_D, r*0.09);
   ln(g, -r*0.22, r*1.10, r*0.22, r*1.10, MET, r*0.10);
-  rr(g, -r*0.52, r*1.14, r*1.04, r*0.86, OSC, r*0.16);
-  rr(g, -r*0.42, r*1.22, r*0.84, r*0.70, LUZ, r*0.12);
-  g.globalAlpha = fin*0.55;
-  rr(g, -r*0.30, r*1.34, r*0.60, r*0.16, "#fff7ed", r*0.06);
+  // La caja lleva EL COLOR DEL BONO que trae, y un simbolo que lo distingue:
+  // asi se decide si vale la pena dejar de pegar e ir a por el.
+  const B = chispa.bono || BONOS[0];
+  rr(g, -r*0.60, r*1.10, r*1.20, r*0.98, OSC, r*0.18);
+  rr(g, -r*0.48, r*1.18, r*0.96, r*0.82, B.col, r*0.13);
+  g.globalAlpha = fin*0.9; g.fillStyle = OSC;
+  g.save(); g.translate(0, r*1.58); g.scale(r*0.030, r*0.030);
+  if(B.id === "sobrecarga"){                       // rayo
+    g.beginPath(); g.moveTo(2,-11); g.lineTo(-7,2); g.lineTo(-1,2);
+    g.lineTo(-3,11); g.lineTo(7,-3); g.lineTo(1,-3); g.closePath(); g.fill();
+  } else if(B.id === "botin"){                     // monton de chatarra
+    g.beginPath(); g.moveTo(-10,7); g.lineTo(-3,-6); g.lineTo(4,3);
+    g.lineTo(8,-3); g.lineTo(11,7); g.closePath(); g.fill();
+  } else if(B.id === "enjambre"){                  // tres puntos orbitando
+    for(let i=0;i<3;i++){ const a2=i*2.09;
+      g.beginPath(); g.arc(Math.cos(a2)*7, Math.sin(a2)*7, 3.4, 0, 6.2832); g.fill(); }
+    g.beginPath(); g.arc(0,0,2.4,0,6.2832); g.fill();
+  } else {                                         // nucleo
+    g.beginPath(); g.arc(0,0,8,0,6.2832); g.fill();
+    g.globalCompositeOperation = "destination-out";
+    g.beginPath(); g.arc(0,0,4,0,6.2832); g.fill();
+    g.globalCompositeOperation = "source-over";
+  }
+  g.restore();
   g.globalAlpha = fin;
   g.restore();
 
@@ -6754,14 +6812,12 @@ function tocarChispa(px, py){
   const r = radioChispa()*2.2;                     // generoso: es para acertarle
   if(Math.hypot(px - chispa.x, py - chispa.y) > r) return false;
   const cx = chispa.x, cy = chispa.y;
+  const b = chispa.bono || BONOS[0];      // el que ya venia en la caja
   chispa = null;
-  const tot = BONOS.reduce((a,b) => a + b.peso, 0);
-  let v = Math.random()*tot, b = BONOS[0];
-  for(const o of BONOS){ v -= o.peso; if(v <= 0){ b = o; break; } }
 
   let extra = "";
-  if(b.id === "sobrecarga"){ frenesi = 15; }
-  else if(b.id === "enjambre"){ enjambre = 20; }
+  if(b.id === "sobrecarga"){ frenesi = frenesiMax = 15; }
+  else if(b.id === "enjambre"){ enjambre = enjambreMax = 20; }
   else if(b.id === "botin"){
     const gan = Math.max(50, Math.ceil(dps()*60*20 + premio(S.lvl)*8));
     S.scrap += gan; S.runTotal += gan; S.allTime += gan;
@@ -7063,6 +7119,16 @@ if(location.search.indexOf("poses") >= 0){
   construir(); hojaPoses();
   throw new Error("modo poses");
 }
+/* Con `?lamina` se dibujan las hojas de contacto de todos los diseños. Va en un
+   archivo aparte —`dev/lamina.js`— porque es herramienta de trabajo, no juego;
+   como los scripts clasicos comparten el ambito global, alli dentro se ven
+   igual DIB, ZONAS, heroe y compañia. */
+if(location.search.indexOf("lamina") >= 0){
+  construir();
+  document.body.appendChild(Object.assign(document.createElement("script"),
+                                          {src:"dev/lamina.js"}));
+  throw new Error("modo lamina");
+}
 
 /* ---------- INSTALACION EN EL MOVIL ----------
    El service worker solo funciona por HTTPS (o en localhost), asi que en local
@@ -7075,7 +7141,6 @@ if("serviceWorker" in navigator){
 
 /* Chrome guarda el aviso de instalacion y solo lo suelta si se lo pides. Sin
    esto, el jugador tiene que saber buscarlo en el menu del navegador. */
-let instalador = null;
 window.addEventListener("beforeinstallprompt", e => {
   e.preventDefault(); instalador = e;
   const b = $("btnInst"); if(b) b.style.display = "block";

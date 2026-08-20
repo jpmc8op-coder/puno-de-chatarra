@@ -408,6 +408,31 @@ juego, así que lo que se ve es lo que saldría.
 Existe porque describir con palabras qué falla en una pose es lento y ambiguo:
 con la hoja, la respuesta es un número.
 
+## Lámina de diseños
+
+Abrir el juego con **`?lamina`** (`index.html?lamina`) dibuja tres hojas de
+contacto y las deja en `_lamina/`:
+
+| Hoja | Qué lleva |
+|------|-----------|
+| `1-objetos.png` | los aparatos de los siete sectores, con su paleta y su nombre |
+| `2-jefes.png` | los siete jefes más EL ASIMILADO, a tamaño grande y con su capa de amenaza |
+| `3-personaje.png` | los cinco relevos, la mecanización de 100 % a 0 % y los seis tramos de puño |
+
+El código vive en [`dev/lamina.js`](dev/lamina.js), aparte del juego porque es
+herramienta de trabajo. Como los scripts clásicos comparten el ámbito global,
+allí dentro se ven `DIB`, `ZONAS`, `heroe` y compañía: la lámina **no copia**
+ningún diseño, los llama. Si mañana cambia un sprite, la lámina cambia con él.
+
+Para que los PNG lleguen al disco hace falta el servidor de
+[`dev/servidor-lamina.py`](dev/servidor-lamina.py) (puerto 8791), que es
+`http.server` más un `POST /guardar/<nombre>.png`. Sin él, las hojas se ven en
+pantalla igual y solo falla el guardado.
+
+```bash
+python "dev/servidor-lamina.py" 8791
+```
+
 ## Paleta
 
 Post-apocalíptico **luminoso**, no sombrío. Cielos saturados de tres paradas, sol
