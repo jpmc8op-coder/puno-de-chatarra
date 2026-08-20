@@ -977,7 +977,7 @@ const coresPend = () => Math.max(0, coresDe(S.runTotal) - S.cores);
 // Los jefes se ven más grandes y con contorno rojo: el sprite distinto no basta
 // para que se lean como jefe de un vistazo.
 const esJefeAhora = () => esJefe(S.lvl);
-const objVis = () => objS * (esAsimilado(S.lvl) ? 1.24 : esJefeAhora() ? 1.14 : 1);
+const objVis = () => objS * (esAsimilado(S.lvl) ? 1.34 : esJefeAhora() ? 1.24 : 1);
 
 function aparatoActual(){
   const z = zonaDe(S.lvl);
@@ -4913,6 +4913,8 @@ function nuevasMordidas(){
   mordidas = [];
   for(let i=0;i<64;i++) mordidas.push({x:rnd(26,194), y:rnd(18,202), r:rnd(8,20)});
   nuevoDesgaste();
+  nuevaAmenaza();
+  ojoMira = {x:110, y:110};
   coloresObj = null;                        // el aparato nuevo tiene otros colores
 }
 
@@ -4944,6 +4946,123 @@ function interiorJefe(g, P){
     ln(g, 110+Math.cos(a)*22, 110+Math.sin(a)*22, 110+Math.cos(a)*46, 110+Math.sin(a)*46, "#ff4d6d", 3); }
   // remaches del bastidor
   for(let i=0;i<6;i++) for(let j=0;j<6;j++) perno(g, 20+i*36, 20+j*36, 3.4, "#9d7fc4");
+}
+
+/* ---------- AMENAZA ----------
+   Los jefes eran maquinas grandes, pero no daban miedo. Una maquina grande es un
+   aparato; lo que la vuelve un JEFE son otras cosas, y ninguna estaba:
+
+   1. SILUETA ARMADA   pinchos y cuchillas que sobresalen del contorno. Se leen
+      antes que ningun detalle interior, porque el ojo procesa la silueta primero.
+   2. OJOS QUE MIRAN   es la senal de amenaza numero uno del cerebro humano. Y
+      SIGUEN al ultimo golpe: si te mira, te ha visto.
+   3. CICATRICES       quemaduras y grietas. Esta cosa ya ha matado antes.
+   4. LUZ DE FRAGUA    el rojo sube desde abajo, como si por dentro ardiera.
+
+   Se sortea una vez por jefe, igual que el desgaste: sorteandolo por fotograma
+   los pinchos temblarian.                                                     */
+let amenazaCfg = null, ojoMira = {x:110, y:110};
+function nuevaAmenaza(){
+  // Mas pinchos y mas largos: son lo primero que lee el ojo, antes que ningun
+  // detalle interior, y a 16 px apenas asomaban del contorno.
+  const P = [], n = 14 + Math.floor(rnd(0,7));
+  for(let i=0;i<n;i++){
+    const a = rnd(0, 6.2832);
+    P.push({a, r: rnd(92, 108), l: rnd(28, 62), w: rnd(9, 20), t: rnd(0,1) > .35 ? 0 : 1});
+  }
+  /* Los ojos van arriba y hacia el centro. Sueltos por todo el cuerpo caian en
+     una pierna o en una oruga y se leian como pilotos, no como una mirada: la
+     posicion es la mitad del significado. Y cuando son dos, van EMPAREJADOS a
+     la misma altura — dos luces a distinta altura no son una cara. */
+  const ojos = [];
+  const no = rnd(0,1) > .45 ? 2 : 1;
+  const oy = rnd(48, 92), orr = rnd(11, 18);
+  if(no === 2){
+    const sep = rnd(26, 46);
+    ojos.push({x: 110 - sep, y: oy, r: orr, f: rnd(0,6.28)});
+    ojos.push({x: 110 + sep, y: oy + rnd(-3,3), r: orr, f: rnd(0,6.28)});
+  } else {
+    ojos.push({x: 110 + rnd(-16,16), y: oy, r: orr*1.25, f: rnd(0,6.28)});
+  }
+  const cic = [];
+  for(let i=0;i<7;i++)
+    cic.push({x: rnd(30,190), y: rnd(30,190), l: rnd(18,52), a: rnd(0,3.14), w: rnd(2,4)});
+  amenazaCfg = {pinchos:P, ojos, cic};
+}
+
+function amenaza(g, P){
+  if(!amenazaCfg) nuevaAmenaza();
+  const A = amenazaCfg;
+  const lat = 0.5 + Math.sin(reloj*3.4)*0.5;             // latido
+  const vida = clamp(S.hp / maxHp(S.lvl), 0, 1);
+  const furia = 1 - vida;                                 // mas herido, mas fiero
+
+  /* 1. SILUETA ARMADA. Van DETRAS del cuerpo (destination-over) para que
+     asomen por el borde sin taparlo, que es como se leen los pinchos de verdad. */
+  g.save();
+  g.globalCompositeOperation = "destination-over";
+  A.pinchos.forEach(q => {
+    const cx = 110 + Math.cos(q.a)*q.r*0.62, cy = 110 + Math.sin(q.a)*q.r*0.62;
+    const ex = 110 + Math.cos(q.a)*(q.r*0.62 + q.l), ey = 110 + Math.sin(q.a)*(q.r*0.62 + q.l);
+    const nx = -Math.sin(q.a)*q.w/2, ny = Math.cos(q.a)*q.w/2;
+    g.fillStyle = "#150f33";
+    g.beginPath();
+    g.moveTo(cx+nx*1.5, cy+ny*1.5); g.lineTo(ex, ey);
+    g.lineTo(cx-nx*1.5, cy-ny*1.5); g.closePath(); g.fill();
+    g.fillStyle = q.t ? "#8c1233" : mezcla(P[1], "#150f33", 0.35);
+    g.beginPath();
+    g.moveTo(cx+nx, cy+ny); g.lineTo(ex, ey); g.lineTo(cx-nx, cy-ny);
+    g.closePath(); g.fill();
+  });
+  g.restore();
+
+  /* 2. LUZ DE FRAGUA y CICATRICES, dentro del cuerpo. */
+  g.save();
+  g.globalCompositeOperation = "source-atop";
+
+  const fr = g.createLinearGradient(0, 220, 0, 60);
+  fr.addColorStop(0, "rgba(255,45,77," + (0.30 + furia*0.34 + lat*0.10).toFixed(3) + ")");
+  fr.addColorStop(0.55, "rgba(140,18,51,0.10)");
+  fr.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = fr; g.fillRect(0,0,220,220);
+
+  g.globalAlpha = .38;                                    // quemaduras
+  A.cic.forEach(c => {
+    g.save(); g.translate(c.x, c.y); g.rotate(c.a);
+    g.fillStyle = "#1a0812";
+    g.fillRect(-c.l/2, -c.w/2, c.l, c.w);
+    g.fillStyle = "rgba(255,77,109,.55)";
+    g.fillRect(-c.l/2, -c.w/2, c.l, Math.max(1, c.w*0.35));
+    g.restore();
+  });
+  g.globalAlpha = 1;
+
+  // borde inferior al rojo: por dentro arde
+  g.globalAlpha = .30 + lat*0.16;
+  const bd = g.createLinearGradient(0, 220, 0, 168);
+  bd.addColorStop(0, "#ff2d4d"); bd.addColorStop(1, "rgba(255,45,77,0)");
+  g.fillStyle = bd; g.fillRect(0, 150, 220, 70);
+  g.globalAlpha = 1;
+
+  /* 3. OJOS. Miran al ultimo sitio donde le pegaste: la pupila se desplaza hacia
+     ahi. Un ojo fijo es una lampara; uno que sigue, una mirada. */
+  A.ojos.forEach(o => {
+    const dx = clamp((ojoMira.x - o.x)/70, -1, 1), dy = clamp((ojoMira.y - o.y)/70, -1, 1);
+    const par = 0.55 + Math.abs(Math.sin(reloj*1.6 + o.f))*0.45;   // parpadeo
+    ci(g, o.x, o.y, o.r*1.22, "#12060f");
+    g.globalAlpha = par;
+    halo(g, o.x, o.y, o.r*1.5, "#ff2d4d");
+    ci(g, o.x, o.y, o.r, "#ff2d4d");
+    ci(g, o.x, o.y, o.r*0.62, "#ffb0bd");
+    g.globalAlpha = 1;
+    // pupila vertical, de depredador
+    g.save(); g.translate(o.x + dx*o.r*0.34, o.y + dy*o.r*0.34);
+    g.fillStyle = "#12060f";
+    g.beginPath(); g.ellipse(0, 0, o.r*0.22, o.r*0.72, 0, 0, 6.2832); g.fill();
+    g.restore();
+  });
+
+  g.restore();
 }
 
 /* ---------- DESGASTE ----------
@@ -5006,6 +5125,7 @@ function pintarAparato(){
   og.clearRect(0,0,220,220);
   (DIB[ap.d] || DIB.tostadora)(og, P);
   patina(og);
+  if(esJefeAhora() || esAsimilado(S.lvl)) amenaza(og, P);
 
   const frac = clamp(S.hp / maxHp(S.lvl), 0, 1);
   const k = Math.floor(Math.pow(1 - frac, 1.55) * mordidas.length);
@@ -5252,6 +5372,7 @@ function golpear(px, py){
     sxp = 110 + (ix-o.x)/SV*220; syp = 110 + (iy-o.y)/SV*220;
   }
   mordidaCercaDe(sxp, syp);
+  ojoMira = {x: sxp, y: syp};        // el jefe mira a donde le acabas de pegar
   flashPuno(ix, iy, ladoPuno, demol ? 1.45 : crit ? 1.2 : 1);
 
   const kills = danar(d);

@@ -863,6 +863,29 @@ también quedaba descolgada. Corregidas las dos cosas, el error es **0 px en tod
 el arco**. Ojo: `posObj()` la usan también `destPuno()` y los impactos, así que
 el fallo desviaba el blanco de los puños, no solo la sombra.
 
+## Que un jefe dé miedo
+
+Eran máquinas grandes, y una máquina grande es un aparato. Lo que la vuelve un
+JEFE son cuatro cosas, aplicadas a los ocho a la vez con `amenaza()` — la misma
+idea que `patina()`: una capa común en vez de retocar ocho diseños.
+
+1. **Silueta armada.** Pinchos y cuchillas que **sobresalen del contorno**, en
+   `destination-over` para que asomen por detrás sin tapar el cuerpo. Se leen
+   antes que ningún detalle interior, porque el ojo procesa la silueta primero.
+2. **Ojos que miran.** Es la señal de amenaza número uno del cerebro. Con pupila
+   **vertical de depredador**, y **siguen al último golpe**: si te mira, te ha
+   visto.
+3. **Cicatrices.** Quemaduras y grietas: esta cosa ya ha matado antes.
+4. **Luz de fragua.** El rojo sube desde abajo, y **sube más cuanto más herido
+   está** — por dentro arde.
+
+> **Dónde van los ojos es la mitad del significado.** Sueltos por el cuerpo caían
+> en una pierna o en una oruga y se leían como pilotos. Van arriba y al centro, y
+> cuando son dos van **emparejados a la misma altura**: dos luces a distinta
+> altura no son una cara.
+
+El jefe ocupa además más pantalla (1.24× frente a 1.14×; EL ASIMILADO, 1.34×).
+
 ## Los jefes se destruyen por capas
 
 Un jefe no puede agujerearse de un golpe hasta el fondo. La mordida arranca
