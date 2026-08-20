@@ -2846,16 +2846,38 @@ let siluCache = {}, sueloCache = {}, desguaceCache = {}, ruinasCache = {};
 
 const PLANOS = [
   // d: distancia (0 = pegado a la camara)   par: cuanto se desplaza
-  {d:5, blur:7.0, lav:0.80, alfa:0.85, par:0.06, n:22, anc:0.030, alt:0.16, base:0.00},
-  {d:4, blur:4.2, lav:0.62, alfa:0.90, par:0.16, n:16, anc:0.045, alt:0.26, base:0.01},
-  {d:3, blur:2.4, lav:0.44, alfa:0.94, par:0.32, n:12, anc:0.070, alt:0.40, base:0.03},
-  {d:2, blur:1.0, lav:0.24, alfa:1.00, par:0.55, n: 8, anc:0.110, alt:0.62, base:0.06}
+  {d:5, blur:7.0, lav:0.80, alfa:0.85, par:0.05, n:22, anc:0.030, alt:0.16, base:0.00},
+  {d:4, blur:4.2, lav:0.62, alfa:0.90, par:0.12, n:16, anc:0.045, alt:0.26, base:0.01},
+  {d:3, blur:2.4, lav:0.44, alfa:0.94, par:0.21, n:12, anc:0.070, alt:0.40, base:0.03},
+  {d:2, blur:1.0, lav:0.24, alfa:1.00, par:0.32, n: 8, anc:0.110, alt:0.62, base:0.06}
 ];
+
+/* Factor de paralaje de CADA capa de la escena, ordenadas de lejos a cerca.
+   Tiene que ser una escalera que sube siempre: en cuanto una capa de delante se
+   mueve menos que otra de detras, el ojo lee la profundidad al reves y el efecto
+   se rompe entero. Es exactamente lo que pasaba con el horizonte y las ruinas,
+   que se dibujaban quietas por delante de planos que si se movian. */
+const PAR = {
+  planos:    [0.05, 0.12, 0.21, 0.32],   // los cuatro fondos desenfocados
+  horLejos:  0.44,
+  ruinas:    0.58,
+  horCerca:  0.74,
+  desguace:  0.92,
+  frente:    1.15
+};
+
+/* Envuelve un dibujado en su desplazamiento de camara. Asi cada capa declara su
+   distancia en un solo sitio y no hay forma de que se quede quieta. */
+function conParalaje(g, factor, dibujo){
+  g.save();
+  g.translate(camaraX()*factor, camaraY()*factor*0.5);
+  dibujo();
+  g.restore();
+}
 /* El margen tiene que cubrir el desplazamiento MAXIMO del plano que mas se
    mueve, o al deslizarse deja el borde del lienzo al aire. Maximo de camaraX:
-   62 + 26 + 115 + 110 = 313 px; el frente lo multiplica por 0.95 -> 297. Con 340
-   sobra en todos. */
-const MARGEN_PAR = 340;
+   62 + 26 + 115 + 110 = 313 px; el frente lo multiplica por 1.15 -> 360. */
+const MARGEN_PAR = 380;
 let fondoCache = {};
 
 /* Camara. Se mueve SIEMPRE: una deriva lenta de fondo —como el pulso de una
@@ -2952,7 +2974,7 @@ function dibujarPlanos(g, zi){
   for(let i = 0; i < PLANOS.length; i++){           // del mas lejano al mas cercano
     const P = PLANOS[i], c = capaFondo(zi, i);
     g.globalAlpha = P.alfa;
-    g.drawImage(c, -MARGEN_PAR + cx*P.par, cy*P.par*0.5);
+    g.drawImage(c, -MARGEN_PAR + cx*PAR.planos[i], cy*PAR.planos[i]*0.5);
   }
   g.globalAlpha = 1;
 }
@@ -3002,7 +3024,7 @@ function capaFrente(zi){
 }
 function dibujarFrente(g, zi){
   g.globalAlpha = 0.55;
-  g.drawImage(capaFrente(zi), -MARGEN_PAR + camaraX()*0.95, camaraY()*0.9);
+  g.drawImage(capaFrente(zi), -MARGEN_PAR + camaraX()*PAR.frente, camaraY()*PAR.frente*0.7);
   g.globalAlpha = 1;
 }
 
@@ -3156,6 +3178,7 @@ function pico(g, x, base, w, h, c){
 }
 function dibujarHorizonte(g, z, zi, t){
   const S1 = silueta(zi);
+  g.save(); g.translate(camaraX()*PAR.horLejos, camaraY()*PAR.horLejos*0.5);
   S1.lejos.forEach(s => {
     const x = s.x*CW, w = s.w*CW, h = s.h*HOR;
     if(z.horiz === "chatarra") pico(g, x, HOR, w, h, z.silu);
@@ -3165,6 +3188,8 @@ function dibujarHorizonte(g, z, zi, t){
     }
     else rr(g, x - w/2, HOR - h, w, h, z.silu, 1);
   });
+  g.restore();
+  g.save(); g.translate(camaraX()*PAR.horCerca, camaraY()*PAR.horCerca*0.5);
   S1.cerca.forEach(s => {
     const x = s.x*CW, w = s.w*CW, h = s.h*HOR*1.25, C = z.silu2;
     if(z.horiz === "chatarra"){
@@ -3198,6 +3223,7 @@ function dibujarHorizonte(g, z, zi, t){
       g.restore();
     }
   });
+  g.restore();
 }
 
 let motas = [];
@@ -3249,31 +3275,31 @@ const POSES = [
   {n:"TITÁN",      mano:0, rot: 0.00, esc:1.02, oy: 0, sy:1.14, amp:1.1,
    tg:[ -74,-268,1.16], dg:[  74,-268,1.16], p1:[ -82, 0], p2:[  76, 0], h:[  0,-10,-0.14]},
 
-  {n:"MARTILLO",   mano:5, rot: 0.06, esc:1.00, oy: 0, sy:1.06, amp:1.0,
+  {n:"MARTILLO",   mano:0, rot: 0.06, esc:1.00, oy: 0, sy:1.06, amp:1.0,
    tg:[-110, -30,0.92], dg:[  26,-286,1.22], p1:[ -72, 4], p2:[  56, -3], h:[  6, -6, 0.20]},
 
-  {n:"CENTINELA",  mano:2, rot: 0.00, esc:0.98, oy: 0, sy:1.16, amp:0.5,
+  {n:"CENTINELA",  mano:0, rot: 0.00, esc:0.98, oy: 0, sy:1.16, amp:0.5,
    tg:[  46,-118,0.96], dg:[ -44,-122,0.96], p1:[ -28, 0], p2:[  24, 0], h:[  0, -8, 0.00]},
 
-  {n:"DEMOLEDOR",  mano:1, rot: 0.06, esc:0.94, oy: 0, sy:0.96, amp:0.8,
+  {n:"DEMOLEDOR",  mano:0, rot: 0.06, esc:0.94, oy: 0, sy:0.96, amp:0.8,
    tg:[-114, -56,0.78], dg:[  22,-104,2.45], p1:[ -98, 6], p2:[  60, -4], h:[-18,-10,-0.16]},
 
-  {n:"GARRA",      mano:4, rot: 0.00, esc:1.00, oy: 0, sy:0.90, amp:1.0,
+  {n:"GARRA",      mano:0, rot: 0.00, esc:1.00, oy: 0, sy:0.90, amp:1.0,
    tg:[-154, -36,1.08], dg:[ 152, -36,1.08], p1:[ -80, 0], p2:[  72, 0], h:[  0, 12, 0.00]},
 
-  {n:"ARAÑA",      mano:4, rot: 0.00, esc:1.00, oy: 0, sy:0.64, amp:0.7,
+  {n:"ARAÑA",      mano:0, rot: 0.00, esc:1.00, oy: 0, sy:0.64, amp:0.7,
    tg:[-130, -28,1.06], dg:[ 126, -28,1.06], p1:[-100, 0], p2:[  96, 0], h:[  0, 14, 0.00]},
 
-  {n:"LÁTIGO",     mano:2, rot:-0.34, esc:1.00, oy: 0, sy:1.04, amp:1.2,
+  {n:"LÁTIGO",     mano:0, rot:-0.34, esc:1.00, oy: 0, sy:1.04, amp:1.2,
    tg:[-126,-206,1.08], dg:[ 110, -42,0.90], p1:[ -50, -18], p2:[  86, 30], h:[ -8, -6, 0.26]},
 
-  {n:"TIJERA",     mano:3, rot: 0.00, esc:1.00, oy: 0, sy:0.80, amp:0.7,
+  {n:"TIJERA",     mano:0, rot: 0.00, esc:1.00, oy: 0, sy:0.80, amp:0.7,
    tg:[-156,-104,1.02], dg:[ 152,-104,1.02], p1:[-124, 0], p2:[ 120, 0], h:[  0,  6, 0.00]},
 
-  {n:"TORNADO",    mano:1, rot: 0.40, esc:1.00, oy: 0, sy:1.04, amp:1.2,
+  {n:"TORNADO",    mano:0, rot: 0.40, esc:1.00, oy: 0, sy:1.04, amp:1.2,
    tg:[-140,-124,1.06], dg:[  44,-212,1.06], p1:[ -78, 33], p2:[  74, -31], h:[ 10, -6,-0.34]},
 
-  {n:"RAYO",       mano:3, rot: 0.22, esc:1.00, oy: 0, sy:1.10, amp:1.1,
+  {n:"RAYO",       mano:0, rot: 0.22, esc:1.00, oy: 0, sy:1.10, amp:1.1,
    tg:[-118, -40,0.92], dg:[ 112,-272,1.22], p1:[ -90, 20], p2:[  50, -11], h:[  8, -6,-0.26]}
 ];
 
@@ -4599,11 +4625,7 @@ function flashPuno(x, y, lado, fuerza){
   // La forma de la mano cambia en cada golpe, y nunca repite la anterior: dos
   // seguidas iguales delatan el sorteo. Los golpes fuertes tiran de las formas
   // mas vistosas (garra, canto, lanza).
-  const pool = fuerza >= 1.4 ? [2,3,4,4,5] : fuerza >= 1.15 ? [0,1,2,3,4] : [0,0,1,2,5];
-  let f = pick(pool), intentos = 0;
-  while(f === formaAnt && intentos++ < 4) f = pick(pool);
-  formaAnt = f;
-  punos.push({x, y, lado, t:0, dur:0.30, f:fuerza||1, forma:f,
+  punos.push({x, y, lado, t:0, dur:0.30, f:fuerza||1, forma:0,
               ang: base, giro: rnd(-0.18, 0.18)});
 }
 function dibujarPunos(g){
@@ -4611,7 +4633,7 @@ function dibujarPunos(g){
   punos.forEach(p => {
     const k = p.t / p.dur;
     const dirx = Math.cos(p.ang), diry = Math.sin(p.ang);   // hacia donde pega
-    const r0 = punoR*2.45*p.f;
+    const r0 = punoR*1.62*p.f;
 
     /* TIEMPOS. La clave es que el puño YA esta puesto en el fotograma del clic:
        viajar 100 ms hasta el objeto dejaba el impacto del objeto por delante del
@@ -4700,8 +4722,13 @@ function dibujarPunos(g){
       g.save();
       g.translate(x, y); g.rotate(p.ang + Math.PI/2 + p.giro);
       g.scale(2 - sq, sq);             // se ensancha lo que se acorta
+      /* PERSPECTIVA. El puño no llega de frente: llega escorzado y girado sobre
+         su eje. Un poco de cizalla y de estrechamiento lateral bastan para que
+         se lea como un volumen que viene, no como una calcomania girada. */
+      const lad = p.lado ? 1 : -1;
+      g.transform(1, lad*0.13, -lad*0.20, 0.94, 0, 0);
       g.globalAlpha = alfa;
-      guante(g, 0, 0, r0, gl, 1, reloj, 1, p.lado, 2, 0, B, null, p.forma);
+      guante(g, 0, 0, r0, gl, 1, reloj, 1, p.lado, 2, 0, B, null, 0);
       g.restore();
     }
 
@@ -4712,6 +4739,7 @@ function dibujarPunos(g){
       g.globalAlpha = (1 - k/0.07)*0.42;      // a 0.85 tapaba el golpe entero
       g.translate(x, y); g.rotate(p.ang + Math.PI/2 + p.giro);
       g.scale(2 - sq, sq);
+      g.transform(1, (p.lado?1:-1)*0.13, -(p.lado?1:-1)*0.20, 0.94, 0, 0);
       g.globalCompositeOperation = "lighter";
       ci(g, 0, 0, r0*0.52, "#ffffff");
       g.restore();
@@ -4852,6 +4880,7 @@ let mordidas = [], parts = [], nums = [], shake = 0, flash = 0,
     hitStop = 0, destello = 0, destelloCol = "#fff", grito = null,
     slow = 0, deudaAuto = 0, pend = 0, pendV = 0,
     girX = 0, girY = 0, vGirX = 0, vGirY = 0,
+    zObj = 0, zObjV = 0,
     frenesi = 0, proxFrenesi = 55 + Math.random()*50;
 
 // Recompensa por estar mirando: cada minuto y medio aprox salta una SOBRECARGA
@@ -5077,11 +5106,19 @@ function trozos(x, y, n, fuerza){
   const cols = coloresDelObjeto();
   for(let i=0;i<n;i++){
     const a = rnd(0,6.2832), v = rnd(40,150)*fuerza*U;
-    parts.push({t:"t", x, y,
-      vx: Math.cos(a)*v, vy: Math.sin(a)*v - rnd(40,120)*U,
-      r: rnd(2.6,6.4)*U, gir: rnd(0,6.2832), vgir: rnd(-9,9),
+    /* PROFUNDIDAD DEL TROZO. 0 = cae en primer termino, 1 = se va al fondo.
+       Con la distancia: aterriza mas ARRIBA (mas cerca del horizonte), es mas
+       PEQUEÑO, va mas APAGADO y cae mas despacio. Son los mismos recursos de
+       perspectiva que el fondo, aplicados a las particulas.                  */
+    const prof = Math.random();
+    const suelo = HOR + (CH - HOR)*(0.06 + (1-prof)*0.72);
+    const esc = 1 - prof*0.55;
+    parts.push({t:"t", x: x + (Math.random()-0.5)*prof*90*U, y,
+      vx: Math.cos(a)*v*esc, vy: Math.sin(a)*v*esc - rnd(40,120)*U*esc,
+      r: rnd(2.6,6.4)*U*esc, gir: rnd(0,6.2832), vgir: rnd(-9,9)*esc,
       c: pick(cols), c2: "#150f33",
-      life: rnd(.7,1.5), max:1.5});
+      prof, suelo, grav: 0.55 + (1-prof)*0.75,
+      life: rnd(2.6,4.2), max:4.2, quieto:0});
   }
 }
 function anillo(x,y,c,rmax){ parts.push({t:"r", x, y, r:2*U, rmax, c, life:.45, max:.45}); }
@@ -5229,6 +5266,11 @@ function golpear(px, py){
   // dedo en horizontal, y sobre el horizontal segun la altura.
   vGirY += offX * 13 * fza;
   vGirX += offY * 13 * fza;
+  /* RETROCESO EN PROFUNDIDAD. El golpe no solo lo mueve de lado: lo manda hacia
+     el fondo. Un demoledor lo hunde casi cuatro veces mas que un golpe normal,
+     y eso es lo que hace que el critico se SIENTA distinto y no solo se lea en
+     el numero. */
+  zObjV += (demol ? 5.4 : crit ? 3.1 : 1.0) * 2.6;
   if(!kills){
     hitStop = Math.max(hitStop, demol ? .13 : crit ? .05 : .022);
     flash = demol ? .2 : .09; squash = 1;
@@ -5901,7 +5943,7 @@ function dibujar(dt){
 
   dibujarPlanos(ctx, zi);                 // tres planos lejanos, desenfocados
   dibujarHorizonte(ctx, z, zi, reloj);
-  dibujarRuinas(ctx, z, zi, reloj);
+  conParalaje(ctx, PAR.ruinas, () => dibujarRuinas(ctx, z, zi, reloj));
 
   // bruma sobre el horizonte
   const gb = ctx.createLinearGradient(0, HOR-CH*.14, 0, HOR+1);
@@ -5945,7 +5987,7 @@ function dibujar(dt){
   });
   ctx.globalAlpha = 1;
 
-  dibujarDesguace(ctx, zi, z);
+  conParalaje(ctx, PAR.desguace, () => dibujarDesguace(ctx, zi, z));
   dibujarMotas(ctx, dt, [z.luz, "#ffffff", z.c[3], z.c[0]]);
 
   // ---- capa de acción ----
@@ -6005,6 +6047,15 @@ function dibujar(dt){
       const pulso = 1 + Math.sin(reloj*(2.2 + (1-vida)*5))*(0.018 + (1-vida)*0.05);
       ctx.scale(pulso, 2 - pulso);
     }
+    /* Perspectiva en Z: al alejarse, un objeto MENGUA y se desplaza hacia el
+       punto de fuga —que aqui esta en el horizonte, al centro—. Las dos cosas a
+       la vez; solo con la escala pareceria que encoge, no que se aleja. */
+    if(zObj > 0.001){
+      const enc = 1 - zObj*0.30;
+      const oAct = posObj();
+      ctx.translate((CW*0.5 - oAct.x)*zObj*0.22, (HOR - oAct.y)*zObj*0.20);
+      ctx.scale(enc, enc);
+    }
     ctx.rotate(tilt);
     /* TRIDIMENSIONALIDAD.
        El aparato es plano, pero al recibir el golpe gira sobre sus ejes como si
@@ -6039,6 +6090,14 @@ function dibujar(dt){
     ctx.drawImage(OUT, X0-B, X0, S0, S0); ctx.drawImage(OUT, X0+B, X0, S0, S0);
     ctx.drawImage(OUT, X0, X0-B, S0, S0); ctx.drawImage(OUT, X0, X0+B, S0, S0);
     ctx.drawImage(OFF, X0, X0, S0, S0);
+    if(zObj > 0.02){                       // se lo come la bruma al alejarse
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.42, zObj*0.66);
+      ctx.globalCompositeOperation = "source-atop";
+      ctx.fillStyle = zonaDe(S.lvl).cielo[0];
+      ctx.fillRect(X0, X0, S0, S0);
+      ctx.restore();
+    }
     if(flash > 0){
       ctx.globalAlpha = Math.min(1, flash*7);
       ctx.drawImage(FLS, X0, X0, S0, S0);
@@ -6059,6 +6118,11 @@ function dibujar(dt){
     } else if(p.t === "t"){
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.gir);
       const w = p.r*2, h = p.r*1.35;
+      // en el suelo se aplasta: es una chapa tumbada, no flotando de canto
+      if(p.quieto) ctx.scale(1, 0.42);
+      // perspectiva aerea tambien en las particulas: el fondo se lava
+      const pr = p.prof || 0;
+      if(pr > 0.02) ctx.globalAlpha *= 1 - pr*0.45;
       ctx.fillStyle = p.c2; ctx.fillRect(-w/2 - U, -h/2 - U, w + 2*U, h + 2*U);
       ctx.fillStyle = p.c;  ctx.fillRect(-w/2, -h/2, w, h);
       ctx.restore();
@@ -6133,6 +6197,11 @@ function frame(now){
   vGirY += (0 - girY)*K3*dt; vGirY -= vGirY*Math.min(1, D3*dt); girY += vGirY*dt;
   girX = clamp(girX, -0.85, 0.85); girY = clamp(girY, -0.85, 0.85);
 
+  // Vuelve mas lento que los giros: hundirse rapido y volver despacio es lo que
+  // da peso. Al mismo ritmo pareceria una pelota de goma.
+  zObjV += (0 - zObj)*46*dt; zObjV -= zObjV*Math.min(1, 6.2*dt); zObj += zObjV*dt;
+  zObj = clamp(zObj, -0.06, 0.95);   // a 0.62 el critico y el demoledor se topaban en el mismo sitio
+
   if(enjambre > 0) enjambre = Math.max(0, enjambre - dtR);
   moverChispa(dtR);
   if(muerto > 0) muerto -= dt;
@@ -6193,11 +6262,27 @@ function frame(now){
   parts.forEach(p => {
     p.life -= dt;
     if(p.t === "r") p.r += (p.rmax - p.r) * Math.min(1, dt*8);
-    else if(p.t !== "b"){
-      p.vy += 300*U*dt; p.x += p.vx*dt; p.y += p.vy*dt;
-      if(p.t === "t"){ p.gir += p.vgir*dt; p.vgir *= 0.995; }
+    else if(p.t === "t"){
+      if(p.quieto){
+        p.vgir = 0;                              // ya esta en el suelo
+      } else {
+        p.vy += 300*U*dt*(p.grav || 1);
+        p.x += p.vx*dt; p.y += p.vy*dt;
+        p.gir += p.vgir*dt; p.vgir *= 0.995;
+        if(p.y >= p.suelo){                      // aterriza
+          p.y = p.suelo;
+          if(Math.abs(p.vy) > 60*U){             // un rebote corto y ya
+            p.vy *= -0.32; p.vx *= 0.55; p.vgir *= 0.4;
+          } else {
+            p.quieto = 1; p.vy = 0; p.vx = 0;
+            p.gir = Math.round(p.gir/1.5708)*1.5708 + rnd(-0.25,0.25);
+          }
+        }
+      }
     }
+    else if(p.t !== "b"){ p.vy += 300*U*dt; p.x += p.vx*dt; p.y += p.vy*dt; }
   });
+  if(parts.length > 320) parts.splice(0, parts.length - 320);   // techo de restos
   if(parts.length) parts = parts.filter(p => p.life > 0);
 
   nums.forEach(n => { n.life -= dt*1.15; n.y += n.vy*dt; n.x += n.vx*dt; n.vy *= .95; });
@@ -6351,7 +6436,12 @@ function tiempoFuera(seg){
 function offline(){
   const seg = Math.min((Date.now() - (S.t || Date.now()))/1000, 8*3600);
   if(seg < 60) return;
-  const D = dps() * relFuera(); if(D <= 0) return;
+  /* Suelo de produccion sin conexion. Con solo `dps()`, quien todavia no ha
+     comprado implantes volvia a una pantalla vacia: nada que gastar y ninguna
+     razon para haber vuelto. El turno sigue aunque nadie te releve — pegas a
+     mano, despacio— y eso da el primer empujon para comprar el primer implante. */
+  const D = Math.max(dps(), golpeBase()*0.25) * relFuera();
+  if(D <= 0) return;
   const nivel0 = S.lvl;
   let resto = D*seg, gan = 0, n = 0;
   while(resto > 0 && n < 20000){
@@ -6430,24 +6520,78 @@ function moverChispa(dt){
   }
 }
 function radioChispa(){ return 26*U; }
+/* El dron de rescate. Antes era un circulo amarillo con cuatro palos girando:
+   se leia como una moneda, no como una maquina que pasa y hay que cazar. Ahora
+   es un dron de verdad —fuselaje, cuatro brazos con rotores, tren de aterrizaje
+   y una garra con la caja del premio colgando— dibujado con las mismas piezas
+   que los aparatos, para que pertenezca al mismo mundo. */
 function dibujarChispa(g){
   if(!chispa) return;
-  const r = radioChispa(), pul = 1 + Math.sin(reloj*7)*0.10;
+  const r = radioChispa();
   const fin = Math.min(1, chispa.vida/1.2);        // parpadea al irse
-  g.globalAlpha = fin * (0.30 + Math.sin(reloj*9)*0.10);
-  ci(g, chispa.x, chispa.y, r*2.5*pul, "#ffe14d");
+  const lado = chispa.vx > 0 ? 1 : -1;
+  const cab = Math.sin(reloj*2.6)*0.09;            // cabeceo al avanzar
+  const MET = "#b9c2cc", MET_D = "#5a6285", OSC = "#150f33", LUZ = "#ffe14d";
+
+  g.save();
+  g.translate(chispa.x, chispa.y);
+  g.rotate(cab - lado*0.12);
+  g.scale(lado, 1);
+
+  // halo: es lo que hace que se vea aunque el fondo este cargado
+  g.globalAlpha = fin * (0.26 + Math.sin(reloj*9)*0.09);
+  ci(g, 0, 0, r*2.9, LUZ);
   g.globalAlpha = fin;
-  ci(g, chispa.x, chispa.y, r*1.12, "#150f33");
-  ci(g, chispa.x, chispa.y, r*pul, "#ffe14d");
-  ci(g, chispa.x, chispa.y, r*0.62*pul, "#fff7ed");
-  // aspas: se lee como un dron de rescate, no como una moneda
-  g.globalAlpha = fin*0.9;
+
+  // brazos y rotores
   for(let i=0;i<4;i++){
-    const a = i*1.571 + reloj*6;
-    ln(g, chispa.x + Math.cos(a)*r*1.2, chispa.y + Math.sin(a)*r*1.2,
-         chispa.x + Math.cos(a)*r*2.1, chispa.y + Math.sin(a)*r*2.1, "#ffd166", Math.max(2, U*2));
-    ci(g, chispa.x + Math.cos(a)*r*2.1, chispa.y + Math.sin(a)*r*2.1, r*0.22, "#150f33");
+    const ax = (i < 2 ? -1 : 1) * r*1.55;
+    const ay = (i % 2 ? 1 : -1) * r*0.62;
+    ln(g, 0, 0, ax, ay, OSC, r*0.40);
+    ln(g, 0, 0, ax, ay, MET_D, r*0.24);
+    ci(g, ax, ay, r*0.34, OSC); ci(g, ax, ay, r*0.22, MET);
+    // disco del rotor: giro rapido, se lee como movimiento
+    g.globalAlpha = fin*0.30;
+    ci(g, ax, ay, r*0.92, MET);
+    g.globalAlpha = fin*0.85;
+    for(let k=0;k<2;k++){
+      const a2 = reloj*22 + i*1.1 + k*Math.PI;
+      ln(g, ax, ay, ax + Math.cos(a2)*r*0.88, ay + Math.sin(a2)*r*0.88, MET, Math.max(1.5, U*1.4));
+    }
+    g.globalAlpha = fin;
+    ci(g, ax, ay, r*0.10, LUZ);
   }
+
+  // fuselaje
+  rr(g, -r*1.05, -r*0.66, r*2.10, r*1.32, OSC, r*0.42);
+  rr(g, -r*0.90, -r*0.52, r*1.80, r*1.04, MET_D, r*0.34);
+  rr(g, -r*0.62, -r*0.40, r*1.10, r*0.56, MET, r*0.22);
+  // cristal delantero encendido
+  ci(g, r*0.52, -r*0.06, r*0.34, OSC);
+  ci(g, r*0.52, -r*0.06, r*0.24, LUZ);
+  ci(g, r*0.58, -r*0.12, r*0.09, "#fff7ed");
+  // luces de posicion
+  ci(g, -r*0.86, r*0.18, r*0.13, "#ff4d6d");
+  ci(g,  r*0.86, r*0.18, r*0.13, "#a6ff4d");
+  // tren de aterrizaje
+  ln(g, -r*0.45, r*0.60, -r*0.60, r*1.05, MET_D, r*0.14);
+  ln(g,  r*0.45, r*0.60,  r*0.60, r*1.05, MET_D, r*0.14);
+  ln(g, -r*0.82, r*1.05,  r*0.82, r*1.05, MET, r*0.13);
+
+  // la carga: cable, garra y caja con el premio
+  const bal = Math.sin(reloj*3.1)*0.16;            // la caja se balancea sola
+  g.save();
+  g.translate(0, r*1.05); g.rotate(bal);
+  ln(g, 0, 0, 0, r*1.10, MET_D, r*0.09);
+  ln(g, -r*0.22, r*1.10, r*0.22, r*1.10, MET, r*0.10);
+  rr(g, -r*0.52, r*1.14, r*1.04, r*0.86, OSC, r*0.16);
+  rr(g, -r*0.42, r*1.22, r*0.84, r*0.70, LUZ, r*0.12);
+  g.globalAlpha = fin*0.55;
+  rr(g, -r*0.30, r*1.34, r*0.60, r*0.16, "#fff7ed", r*0.06);
+  g.globalAlpha = fin;
+  g.restore();
+
+  g.restore();
   g.globalAlpha = 1;
 }
 function tocarChispa(px, py){
