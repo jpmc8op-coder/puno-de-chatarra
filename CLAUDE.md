@@ -461,6 +461,28 @@ se entrega a golpes que se ven en vez de goteando.
 todavía no tiene implantes cazaba el bono más vistoso del juego para no recibir
 absolutamente nada.
 
+## Cuando algo llega al tope
+
+Una mejora al máximo solo cambiaba el precio por un «MÁX» pequeño **en ámbar, el
+mismo color que todos los precios**: seguía leyéndose como algo que se puede
+comprar. Ahora deja de ser un botón y pasa a leerse como un logro:
+
+- La tarjeta se pone **verde**, con rayado diagonal y sin relieve — sin salto al
+  pasar por encima, sin cursor de mano.
+- Donde iba el precio va la insignia **AL MÁXIMO**, y debajo **✓ nivel / tope**.
+  (Probé un sello en diagonal en la esquina y se cruzaba con el número: con las
+  tarjetas a dos columnas no queda esquina libre, y el sitio del precio es justo
+  el que deja de hacer falta.)
+- En **EQUIPO**, la pieza que ya no puede mejorar más dice **✓ forma definitiva**
+  y se pone verde. Antes se veía igual que las de en medio, así que no se sabía
+  si faltaba una mejora más o si esa ya era la última.
+- En el **archivo**, un logro cumplido dice **✓ CONSEGUIDO · +4%** en vez de
+  repetir «20 / 20», que es lo mismo que muestra uno a medias.
+
+Ojo con el orden en la hoja de estilos: `.eqrow.tope` tiene que ir **después** de
+`.eqrow.on`. Misma especificidad, gana la última, y el ámbar de `.on` se comía el
+verde del tope.
+
 ## Lámina de diseños
 
 Abrir el juego con **`?lamina`** (`index.html?lamina`) dibuja tres hojas de

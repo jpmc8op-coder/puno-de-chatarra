@@ -187,6 +187,34 @@ body{
 .card.no{opacity:.42;cursor:not-allowed}
 .card.no:hover{transform:none;border-color:var(--borde);
   box-shadow:inset 0 4px 0 rgba(255,255,255,.10), 0 6px 0 var(--borde)}
+/* ---------- UNA MEJORA AL TOPE ----------
+   Al llegar al maximo la tarjeta solo cambiaba el precio por un "MÁX" pequeño
+   en ambar —el mismo color que todos los precios—, asi que seguia leyendose
+   como algo que se puede comprar. Ahora deja de ser un boton (sin relieve, sin
+   salto al pasar por encima, sin cursor de mano) y pasa a leerse como un logro:
+   verde, con su sello y con las rayas de "aqui ya no hay nada que hacer". */
+.card.tope{cursor:default;border-color:var(--lime);overflow:hidden;
+  background:linear-gradient(160deg,#215239,#15301f);
+  box-shadow:inset 0 4px 0 rgba(255,255,255,.10), 0 6px 0 #0f2a1c}
+.card.tope:hover, .card.tope:active{transform:none;border-color:var(--lime);
+  box-shadow:inset 0 4px 0 rgba(255,255,255,.10), 0 6px 0 #0f2a1c}
+.card.tope .nm{color:#e6ffef}
+.card.tope .ds{color:#93d5ae}
+.card.tope .ic{filter:drop-shadow(0 0 6px rgba(166,255,77,.5))}
+/* rayado tenue: cerrado, no comprable */
+.card.tope::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.10;
+  background:repeating-linear-gradient(45deg,#a6ff4d 0 8px,transparent 8px 17px)}
+/* La insignia va DONDE IBA EL PRECIO. Probe un sello en diagonal en la esquina
+   y se cruzaba con el numero: con las tarjetas a dos columnas no queda esquina
+   libre, y el sitio del precio es justo el que deja de hacer falta. */
+.card.tope .pr{display:inline-block;background:var(--lime);color:#0d0925;
+  font-size:11.5px;font-weight:900;letter-spacing:1.6px;padding:5px 11px;
+  border-radius:11px;box-shadow:0 3px 0 #4f7d18}
+.card.tope .qt{background:var(--lime);color:#0d0925;margin-top:0;
+  box-shadow:0 0 0 3px rgba(166,255,77,.22)}
+/* En columna, como en las demas tarjetas: al ser las dos pastillas en linea, se
+   comian el ancho y la descripcion se partia. */
+.card.tope .rt{display:flex;flex-direction:column;align-items:flex-end;gap:7px}
 .card.buy{animation:flash .35s}
 @keyframes flash{0%{background:#4dff9e}100%{background:var(--panel)}}
 .card .ic{width:40px;height:40px;display:block;margin:0 auto;
@@ -236,6 +264,10 @@ body{
 .eqrow.on .en{color:#fff}
 .eqrow .eq{font-size:12px;color:var(--dim);margin-top:3px;line-height:1.4}
 .eqrow.on .eq{color:var(--amber)}
+/* La pieza que ya no puede mejorar mas, en la lista de EQUIPO */
+.eqrow.tope{border-left-color:var(--lime);background:#1c3a2a}
+.eqrow.tope .en{color:#e6ffef}
+.eqrow.tope .eq{color:var(--lime)}
 #retWrap{position:relative;margin-bottom:16px}
 #poseTag{position:absolute;left:0;right:0;bottom:0;padding:5px 8px;pointer-events:none;
   background:linear-gradient(180deg,transparent,rgba(13,9,37,.92));text-align:center}
@@ -339,7 +371,9 @@ body{
 .arcHero i{display:block;width:20px;height:20px;border-radius:50%}
 .arcLogs{display:grid;gap:6px;margin:0 4px}
 .arcLog{background:#1b1440;border-left:5px solid var(--line);border-radius:12px;padding:8px 11px;opacity:.55}
-.arcLog.ok{opacity:1;border-left-color:var(--lime)}
+.arcLog.ok{opacity:1;border-left-color:var(--lime);background:#16301f}
+.arcLog.ok .al1{color:#e6ffef}
+.arcLog.ok .al3{color:var(--lime);font-weight:900;font-size:11px;letter-spacing:.6px}
 .arcLog .al1{font-size:13px;font-weight:800;color:#e8dcff}
 .arcLog .al2{font-size:11px;color:var(--dim);margin-top:1px}
 .arcLog .albar{height:6px;background:#0d0925;border-radius:4px;overflow:hidden;margin-top:5px}
@@ -5807,17 +5841,22 @@ function construir(){
     else comprarCrew(+k.slice(2));
   };
 }
-function pinta(card, precio, puedo, cant, tope, aporte, lote){
+function pinta(card, precio, puedo, cant, tope, aporte, lote, mx){
   // Con x10 o MAX el precio es el del LOTE, y se dice cuantas entran: sin el
   // ×N no se sabe si MAX te compra tres o treinta.
-  card.querySelector("[data-pr]").innerHTML = tope ? "MÁX"
+  // Al tope, donde iba el precio va el nivel sobre el maximo: dice de un vistazo
+  // que no falta nada, y de paso recuerda cual era el techo.
+  card.querySelector("[data-pr]").innerHTML = tope ? "AL MÁXIMO"
     : fmt(precio) + (lote > 1 ? ' <span style="opacity:.6;font-size:.82em">×' + lote + '</span>' : "");
-  card.querySelector("[data-qt]").textContent = cant;
+  // El nivel lleva el techo al lado: dice que no falta nada Y cual era el tope.
+  card.querySelector("[data-qt]").innerHTML = tope
+    ? "&#10003; " + cant + (mx ? " / " + mx : "") : cant;
   const ap = card.querySelector("[data-apor]");
   if(ap) ap.innerHTML = cant > 0
     ? '<b>' + fmt(aporte) + '</b>/seg en total · <b>' + Math.round(aporte/Math.max(1,dps())*100) + '%</b> de tu producción'
     : '';
   card.classList.toggle("no", !puedo && !tope);
+  card.classList.toggle("tope", !!tope);
   if(tope) card.classList.remove("no");
 }
 function refrescar(){
@@ -5865,7 +5904,7 @@ function refrescar(){
       const f = FIST.find(x => "f_"+x.id === k), lv = S.fist[f.id],
             tope = !!f.mx && lv >= f.mx, L = loteFist(f),
             c = L.cant ? L.gasto : costFist(f), ok = L.cant > 0 && S.scrap >= c;
-      pinta(card, c, ok, lv, tope, undefined, L.cant);
+      pinta(card, c, ok, lv, tope, undefined, L.cant, f.mx);
       if(ok && !tope) hayFist = true;
     } else {
       const i = +k.slice(2), L = loteCrew(i),
@@ -5937,8 +5976,12 @@ function refrescar(){
     const i = tramo(f), lv = S.fist[f.id];
     row.classList.toggle("on", i > 0 || lv > 0);
     const sig = f.tramos[i+1];
+    // Sin esto, la ultima pieza se veia igual que las de en medio: el jugador no
+    // sabia si le faltaba una mejora mas o si esa ya era la definitiva.
+    row.classList.toggle("tope", !sig && (i > 0 || lv > 0));
     row.querySelector("[data-eqt]").innerHTML = f.tramos[i][1]
-      + (sig ? ' <span style="opacity:.55">· nivel '+sig[0]+' &rarr; '+sig[1]+'</span>' : "");
+      + (sig ? ' <span style="opacity:.55">· nivel '+sig[0]+' &rarr; '+sig[1]+'</span>'
+             : ' <span style="font-weight:800">&#10003; forma definitiva</span>');
   });
 
   const hb = $("humBar");
@@ -7156,7 +7199,8 @@ function pintarArchivo(){
       + '<div class="al1">' + (ok ? L.n : "· · ·") + '</div>'
       + '<div class="al2">' + L.d + '</div>'
       + '<div class="albar"><i style="width:' + Math.round(v/L.meta*100) + '%"></i></div>'
-      + '<div class="al3">' + fmt(v) + " / " + fmt(L.meta) + '</div></div>';
+      + '<div class="al3">' + (ok ? "&#10003; CONSEGUIDO · +4%" : fmt(v) + " / " + fmt(L.meta))
+      + '</div></div>';
   }).join("");
   const nl = (S.logros || []).length;
 
