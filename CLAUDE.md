@@ -424,8 +424,18 @@ Dos decisiones que importan:
   pantalla en la que caiga el objetivo. Con la regla fácil, la nube acababa
   tapando justo lo que señalaba (la barra de vida y la humanidad).
 
-Se guarda en `S.tuto`. Con **`?tuto`** en la URL vuelve a salir sin borrar la
-partida, y en la pestaña NÚCLEOS hay un botón para repetirla.
+**Dónde se guarda que ya se vio: en su propia llave de `localStorage`
+(`pdc_guia_vista`), NO dentro de la partida.** Estuvo en `S.tuto` y volvía a
+salir sola, porque hay tres sitios donde la partida se rehace entera con
+`S = NEW()`: el relevo de héroe al perder toda la humanidad, el reciclaje por
+núcleos y el borrado manual. Los dos primeros son juego normal —reciclar es el
+bucle principal—, así que cada vuelta traía otra vez el tutorial.
+
+Y se marca **al empezar**, no al terminar: si se cierra la app a media guía,
+tampoco reaparece.
+
+Con **`?tuto`** en la URL vuelve a salir, y en la pestaña NÚCLEOS hay un botón
+para repetirla.
 
 ## El enjambre se ve
 

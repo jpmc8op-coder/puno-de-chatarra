@@ -7387,6 +7387,13 @@ const TUTO = [
 let tutoI = -1;
 const enTuto = () => tutoI >= 0;
 
+/* Fuera de `S` a proposito: la partida se rehace entera al reciclar y al
+   relevar heroe, y con la marca dentro se perdia en cada vuelta. */
+const LLAVE_GUIA = "pdc_guia_vista";
+const guiaVista  = () => { try{ return localStorage.getItem(LLAVE_GUIA) === "1"; }
+                           catch(e){ return true; } };   // si no hay donde anotar, no insistir
+const marcarGuia = () => { try{ localStorage.setItem(LLAVE_GUIA, "1"); }catch(e){} };
+
 // Rectangulo al que apunta el paso, en coordenadas de pantalla.
 function tutoCaja(foco){
   if(foco === "objeto"){                       // el aparato, alla donde se balancee
@@ -7454,6 +7461,7 @@ function tutoIr(i){
 
 function tutoIniciar(){
   if(document.getElementById("parte")) { setTimeout(tutoIniciar, 900); return; }
+  marcarGuia();            // al EMPEZAR: si cierra la app a medias, no vuelve
   cerrarPanel();
   tutoIr(0);
 }
@@ -7461,7 +7469,7 @@ function tutoIniciar(){
 function tutoFin(){
   tutoI = -1;
   $("tuto").classList.remove("on", "libre", "sigue");
-  S.tuto = 1; guardar();
+  marcarGuia();
 }
 
 // El unico paso que exige hacer algo: se cierra desde `golpear`.
@@ -7528,7 +7536,8 @@ construir();
 refrescar();
 /* La guia sale sola la primera vez. Con `?tuto` en la URL se puede volver a
    ver sin borrar la partida, y desde NUCLEOS hay boton para repetirla. */
-if(!S.tuto || location.search.indexOf("tuto") >= 0) setTimeout(tutoIniciar, 700);
+if(S.tuto) marcarGuia();          // partidas de antes: ya la habian visto
+if(!guiaVista() || location.search.indexOf("tuto") >= 0) setTimeout(tutoIniciar, 700);
 setInterval(guardar, 5000);
 
 /* `beforeunload` NO se dispara en moviles al cambiar de app ni al cerrarla, que
