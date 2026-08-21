@@ -865,8 +865,65 @@ const ZONAS = [
          {n:"Ojo de vigilancia",d:"ojoVigilancia"},{n:"Columna de datos",d:"columnaDatos"},
          {n:"Antena del núcleo",d:"antenaNucleo"},
          {n:"Torreta con escotilla",d:"torretaEscotilla"}],
-    jefe:{n:"Núcleo primario",d:"jNucleo"} }
+    jefe:{n:"Núcleo primario",d:"jNucleo"} },
+
+  /* Los tres ultimos no estan en tierra firme, y eso manda sobre todo lo demas:
+     el cielo, lo que flota en el aire y hasta la gravedad de los restos. */
+  { t:"ÓRBITA MUERTA", sub:"aquí arriba todavía no ha barrido nadie",
+    cielo:["#2b3f9e","#0f1444","#04040e"], suelo:"#1d2140", silu:"#5b6bb5", silu2:"#2b3468",
+    luz:"#9fd8ff", horiz:"orbital", techo:"planeta", fis:"vacio", amb:"polvoOrbital",
+    c:["#c3ccdd","#4d5878","#f2f6ff","#ffb84d","#2a3150"],
+    aps:[{n:"Panel solar partido",d:"panelSolar"},{n:"Satélite de escucha",d:"sateliteVig"},
+         {n:"Módulo de habitación",d:"moduloHab"},{n:"Anillo de atraque",d:"anilloAtraque"},
+         {n:"Brazo de carga orbital",d:"brazoOrbital"},{n:"Traje de vacío",d:"trajeVacio"},
+         {n:"Antena de espacio profundo",d:"antenaProfunda"},
+         {n:"Motor de maniobra",d:"motorManiobra"},
+         {n:"Tanque de oxígeno",d:"tanqueO2"},
+         {n:"Cápsula de carga",d:"capsulaCarga"},
+         {n:"Espejo de comunicaciones",d:"espejoCom"}],
+    jefe:{n:"Plataforma de tiro orbital",d:"jPlataforma"} },
+
+  { t:"FOSA ABISAL", sub:"la flota hundida, y lo que quedó cuidándola",
+    cielo:["#04141f","#0b4256","#1e9ab0"], suelo:"#0a2a38", silu:"#126b80", silu2:"#0a3b4d",
+    luz:"#6fffd2", horiz:"abisal", techo:"superficie", fis:"agua", amb:"burbujas",
+    c:["#7fd4c8","#1f6b74","#dffbf5","#6fffd2","#0d3a44"],
+    aps:[{n:"Sumergible de patrulla",d:"sumergible"},{n:"Sonar de casco",d:"sonar"},
+         {n:"Torpedo sin estallar",d:"torpedo"},{n:"Escafandra de acero",d:"escafandra"},
+         {n:"Junta de presión",d:"juntaPresion"},{n:"Turbina de corriente",d:"turbinaAgua"},
+         {n:"Boya de amarre",d:"boya"},{n:"Mina de fondeo",d:"minaMar"},
+         {n:"Cangrejo de reparación",d:"cangrejoRep"},
+         {n:"Empalme de cable submarino",d:"cableSub"},
+         {n:"Foco abisal",d:"focoAbisal"}],
+    jefe:{n:"Draga abisal",d:"jDraga"} },
+
+  { t:"MINA PROFUNDA", sub:"bajaron a por el mineral y no volvieron",
+    cielo:["#7a3f1c","#341a0e","#120906"], suelo:"#3a2416", silu:"#7a4a2a", silu2:"#43281a",
+    luz:"#ffb03d", horiz:"mina", techo:"roca", fis:"mina", amb:"polvo",
+    c:["#c9a07a","#6b4326","#f3e2cd","#ffb03d","#3a2416"],
+    aps:[{n:"Cabeza de tuneladora",d:"cabezaTunel"},{n:"Broca de percusión",d:"broca"},
+         {n:"Vagoneta cargada",d:"vagoneta"},{n:"Entibado de acero",d:"entibado"},
+         {n:"Ventilador de galería",d:"ventGaleria"},{n:"Sensor sísmico",d:"sensorSismico"},
+         {n:"Trituradora de mineral",d:"trituradora"},{n:"Carrete de cable",d:"carrete"},
+         {n:"Lámpara de bóveda",d:"lamparaMina"},
+         {n:"Compuerta de refugio",d:"compuerta"},
+         {n:"Tramo de cinta",d:"cintaTrans"}],
+    jefe:{n:"Gusano de acero",d:"jGusano"} }
 ];
+/* ---------- FISICA DEL SECTOR ----------
+   En el vacio no hay peso ni aire: lo que sale despedido sigue recto y se va.
+   Bajo el agua todo cae despacio y el agua lo frena hasta dejarlo suspendido.
+   En la mina el aire va cargado y las cosas caen con ganas.
+
+   `g` multiplica la gravedad y `roz` es el rozamiento por segundo. Es la misma
+   diferencia que se ve en un telediario entre una explosion y un submarinista. */
+const FIS = {
+  aire:  {g:1,    roz:0},
+  vacio: {g:0.05, roz:0.02},
+  agua:  {g:0.26, roz:1.9},
+  mina:  {g:1.18, roz:0.25}
+};
+const fisica = () => FIS[zonaDe(S.lvl).fis || "aire"] || FIS.aire;
+
 const ZLARGO = 20;
 const zonaIdx = n => Math.floor((n-1)/ZLARGO) % ZONAS.length;
 const zonaDe  = n => ZONAS[zonaIdx(n)];
@@ -2932,6 +2989,559 @@ const DIB = {
   /* El heroe anterior, reconstruido por las maquinas. Se dibuja con SUS colores
      —por eso se reconoce— pero con la carne sustituida por placa y un solo ojo.
      Es el unico aparato del juego con forma de persona.                       */
+  /* --- SECTOR 8: ORBITA MUERTA --- */
+  panelSolar(g,P){
+    ln(g,110,20,110,200,P[4],14);                      // mastil
+    ln(g,110,20,110,200,P[1],8);
+    [[16,104],[118,104]].forEach(q => {
+      rr(g,q[0],48,86,124,P[4],6);
+      rr(g,q[0]+4,52,78,116,P[1],4);
+      for(let i=0;i<4;i++) for(let j=0;j<5;j++)
+        rr(g,q[0]+8+i*19,56+j*23,15,19,i+j===4?P[4]:P[3],2);
+    });
+    rr(g,86,14,48,20,P[0],7); pernos(g,86,14,48,20,3,P[2]);
+    g.globalAlpha=.5; rr(g,118,52,10,116,"#ffffff",3); g.globalAlpha=1;
+    rr(g,16,150,60,8,P[4],3);                          // el panel esta partido
+  },
+  sateliteVig(g,P){
+    ln(g,44,44,176,176,P[4],7);
+    rr(g,64,74,92,80,P[0],14); chapa(g,70,80,80,68,P[0],P[1],9);
+    pernos(g,66,76,88,76,3.4,P[2]);
+    rr(g,52,96,14,36,P[1],5); rr(g,154,96,14,36,P[1],5);
+    g.fillStyle=P[4]; g.beginPath();                   // plato de escucha
+    g.arc(110,60,40,Math.PI*1.05,Math.PI*1.95); g.closePath(); g.fill();
+    g.fillStyle=P[2]; g.beginPath();
+    g.arc(110,62,32,Math.PI*1.08,Math.PI*1.92); g.closePath(); g.fill();
+    ln(g,110,62,110,96,P[1],5); ci(g,110,60,7,P[3]); halo(g,110,60,15,P[3]);
+    pantallita(g,80,104,60,26,P[4],P[3]);
+    ci(g,110,168,10,P[4]); ci(g,110,168,6,P[3]);
+  },
+  moduloHab(g,P){
+    rr(g,22,66,176,92,P[0],36);
+    rr(g,22,66,176,20,P[2],26); g.globalAlpha=.35;
+    rr(g,22,132,176,26,P[4],20); g.globalAlpha=1;
+    for(let i=0;i<3;i++){ ci(g,58+i*47,112,19,P[4]); ci(g,58+i*47,112,14,P[1]);
+                          ci(g,58+i*47,112,10,P[3]); reflejo(g,50+i*47,102,18,18,9); }
+    remaches(g,30,72,190,72,9,2.6,P[2]);
+    rr(g,6,86,18,52,P[1],7); rr(g,196,86,18,52,P[1],7);   // anillos de union
+    cinta(g,22,150,176,10,P[3],P[4]);
+    parche(g,148,90,40,32,P[1],P[4]);
+  },
+  anilloAtraque(g,P){
+    aro(g,110,110,78,P[4],26); aro(g,110,110,78,P[1],16);
+    for(let i=0;i<8;i++){ const a=i*0.785;
+      ci(g,110+Math.cos(a)*78,110+Math.sin(a)*78,10,P[4]);
+      ci(g,110+Math.cos(a)*78,110+Math.sin(a)*78,6,i%2?P[3]:P[2]); }
+    aro(g,110,110,46,P[0],14);
+    ci(g,110,110,34,P[4]); ci(g,110,110,26,P[1]);
+    g.globalAlpha=.4; ci(g,110,110,20,P[3]); g.globalAlpha=1;
+    for(let i=0;i<4;i++){ const a=i*1.5708+0.4;
+      ln(g,110+Math.cos(a)*46,110+Math.sin(a)*46,
+           110+Math.cos(a)*66,110+Math.sin(a)*66,P[2],6); }
+  },
+  brazoOrbital(g,P){
+    ci(g,32,180,26,P[4]); ci(g,32,180,18,P[1]); pernos(g,16,164,32,32,3,P[2]);
+    tubo(g,32,180,86,110,P[0],P[4],22);
+    ci(g,86,110,17,P[4]); ci(g,86,110,11,P[3]);        // codo
+    tubo(g,86,110,150,58,P[0],P[4],18);
+    ci(g,150,58,13,P[4]); ci(g,150,58,8,P[2]);
+    ln(g,150,58,192,30,P[4],11); ln(g,150,58,192,30,P[2],6);   // pinza
+    ln(g,150,58,196,74,P[4],11); ln(g,150,58,196,74,P[2],6);
+    ci(g,192,30,6,P[3]); ci(g,196,74,6,P[3]);
+    cable(g,40,168,84,120,14,P[1],3);
+    estarcido(g,"07",44,196,7,P[2]);
+  },
+  trajeVacio(g,P){
+    rr(g,66,86,88,96,P[0],26); chapa(g,72,92,76,84,P[0],P[1],14);
+    ci(g,110,60,38,P[4]); ci(g,110,60,31,P[1]);        // casco
+    g.fillStyle=P[3]; g.beginPath();
+    g.arc(110,62,25,Math.PI*0.95,Math.PI*2.05); g.closePath(); g.fill();
+    reflejo(g,90,42,34,30,12);
+    rr(g,40,92,26,62,P[1],11); rr(g,154,92,26,62,P[1],11);   // brazos
+    rr(g,74,182,28,26,P[1],9); rr(g,118,182,28,26,P[1],9);   // botas
+    pantallita(g,86,104,48,24,P[4],P[3]);
+    rr(g,150,110,26,44,P[4],8); rejilla(g,154,116,18,32,4,P[2]);
+    cable(g,66,120,44,150,16,P[4],4);
+    g.globalAlpha=.35; rr(g,84,150,20,26,P[4],6); g.globalAlpha=1;   // el desgarro
+  },
+  antenaProfunda(g,P){
+    rr(g,66,182,88,20,P[4],7); pernos(g,66,182,88,20,3,P[2]);
+    ln(g,110,182,110,120,P[1],13);
+    g.fillStyle=P[4]; g.beginPath(); g.arc(110,96,76,Math.PI*1.03,Math.PI*1.97); g.closePath(); g.fill();
+    g.fillStyle=P[2]; g.beginPath(); g.arc(110,100,66,Math.PI*1.06,Math.PI*1.94); g.closePath(); g.fill();
+    for(let i=1;i<4;i++){ g.globalAlpha=.28;
+      g.strokeStyle=P[1]; g.lineWidth=3; g.beginPath();
+      g.arc(110,100,i*17,Math.PI*1.06,Math.PI*1.94); g.stroke(); g.globalAlpha=1; }
+    ln(g,110,100,110,42,P[1],6); ci(g,110,40,11,P[4]); ci(g,110,40,7,P[3]);
+    halo(g,110,40,22,P[3]);
+    ln(g,74,120,146,120,P[4],5);
+    rr(g,96,150,28,34,P[0],7); pantallita(g,100,156,20,16,P[4],P[3]);
+  },
+  motorManiobra(g,P){
+    rr(g,74,18,72,52,P[1],14); pernos(g,74,18,72,52,3.2,P[2]);
+    rr(g,60,64,100,76,P[0],18); chapa(g,66,70,88,64,P[0],P[1],10);
+    for(let i=0;i<3;i++) rr(g,46,78+i*22,14,14,P[4],4);
+    for(let i=0;i<3;i++) rr(g,160,78+i*22,14,14,P[4],4);
+    g.fillStyle=P[4]; g.beginPath();                    // tobera
+    g.moveTo(70,140); g.lineTo(150,140); g.lineTo(178,198); g.lineTo(42,198); g.closePath(); g.fill();
+    g.fillStyle=P[1]; g.beginPath();
+    g.moveTo(80,148); g.lineTo(140,148); g.lineTo(162,190); g.lineTo(58,190); g.closePath(); g.fill();
+    g.globalAlpha=.5; g.fillStyle=P[3]; g.beginPath();
+    g.moveTo(92,158); g.lineTo(128,158); g.lineTo(142,184); g.lineTo(78,184); g.closePath(); g.fill();
+    g.globalAlpha=1;
+    escarapela(g,110,102,15,P[4],P[3]);
+  },
+  tanqueO2(g,P){
+    rr(g,52,34,116,152,P[0],52); chapa(g,60,44,100,132,P[0],P[1],40);
+    remaches(g,58,60,162,60,8,2.6,P[2]);
+    remaches(g,58,160,162,160,8,2.6,P[2]);
+    cinta(g,52,96,116,16,P[3],P[4]);
+    rr(g,88,14,44,26,P[4],9); rr(g,96,6,28,14,P[1],5);
+    ci(g,110,26,9,P[1]);
+    rr(g,44,120,16,40,P[4],6); rr(g,160,120,16,40,P[4],6);
+    etiqueta(g,72,132,76,26,P[2],P[4]);
+    g.globalAlpha=.4; rr(g,68,54,14,110,"#ffffff",7); g.globalAlpha=1;
+    escape(g,110,186,26,18,P[1],P[4]);
+  },
+  capsulaCarga(g,P){
+    g.fillStyle=P[4]; g.beginPath();
+    g.moveTo(110,12); g.lineTo(168,72); g.lineTo(168,178); g.lineTo(52,178);
+    g.lineTo(52,72); g.closePath(); g.fill();
+    g.fillStyle=P[0]; g.beginPath();
+    g.moveTo(110,26); g.lineTo(158,76); g.lineTo(158,168); g.lineTo(62,168);
+    g.lineTo(62,76); g.closePath(); g.fill();
+    rejilla(g,70,86,80,60,4,P[1]);
+    cinta(g,52,150,116,14,P[3],P[4]);
+    pernos(g,60,74,100,96,3.4,P[2]);
+    rr(g,40,96,14,50,P[1],5); rr(g,166,96,14,50,P[1],5);
+    estarcido(g,"C4",76,196,9,P[2]);
+    ci(g,110,60,8,P[3]); halo(g,110,60,16,P[3]);
+  },
+  espejoCom(g,P){
+    ln(g,110,196,110,150,P[4],12);
+    rr(g,72,186,76,18,P[4],7);
+    g.save(); g.translate(110,100); g.rotate(-0.22);
+    aro(g,0,0,66,P[4],12);
+    ci(g,0,0,60,P[2]);
+    g.globalAlpha=.45; ci(g,-18,-18,34,"#ffffff"); g.globalAlpha=1;
+    for(let i=0;i<6;i++){ const a=i*1.047;
+      ln(g,Math.cos(a)*14,Math.sin(a)*14,Math.cos(a)*58,Math.sin(a)*58,P[1],3); }
+    ci(g,0,0,15,P[4]); ci(g,0,0,9,P[3]);
+    g.restore();
+    ln(g,110,150,150,120,P[1],5); ci(g,150,120,7,P[3]);
+    g.globalAlpha=.3; ci(g,110,100,74,P[3]); g.globalAlpha=1;
+  },
+  jPlataforma(g,P){
+    rr(g,12,104,196,86,P[4],22);                         // casco, mas alto
+    chapa(g,22,114,176,66,P[0],P[1],16);
+    remaches(g,20,112,200,112,11,2.8,P[2]);
+    rr(g,24,74,64,34,P[1],11); rr(g,132,74,64,34,P[1],11);  // hombros
+    for(let i=0;i<4;i++){ rr(g,28+i*15,80,10,20,P[4],3); rr(g,136+i*15,80,10,20,P[4],3); }
+    rr(g,90,10,40,102,P[1],14);                          // canon principal
+    rr(g,80,4,60,24,P[4],10);
+    ci(g,110,16,10,P[3]); halo(g,110,16,24,P[3]);
+    for(let i=0;i<4;i++) rr(g,86,36+i*19,48,8,P[4],3);
+    rr(g,0,120,22,54,P[1],6); rr(g,198,120,22,54,P[1],6);   // paneles plegados
+    for(let j=0;j<4;j++){ rr(g,3,124+j*13,16,9,P[3],2); rr(g,201,124+j*13,16,9,P[3],2); }
+    cinta(g,22,166,176,14,P[3],P[4]);
+    pantallita(g,54,122,48,24,P[4],P[3]);
+    pantallita(g,118,122,48,24,P[4],P[3]);
+    escarapela(g,110,138,14,P[4],P[3]);
+    rr(g,52,190,34,18,P[1],6); rr(g,134,190,34,18,P[1],6);  // pies de anclaje
+    estarcido(g,"00",96,206,10,P[2]);
+  },
+  /* --- SECTOR 9: FOSA ABISAL --- */
+  sumergible(g,P){
+    rr(g,18,74,184,84,P[0],42); chapa(g,28,82,164,68,P[0],P[1],32);
+    remaches(g,26,92,196,92,10,2.6,P[2]);
+    ci(g,54,116,24,P[4]); ci(g,54,116,18,P[3]); reflejo(g,42,102,22,20,10);
+    for(let i=0;i<3;i++){ ci(g,104+i*30,116,11,P[4]); ci(g,104+i*30,116,7,P[1]); }
+    rr(g,86,44,50,32,P[1],12); rr(g,96,30,30,18,P[4],7);   // torreta
+    ci(g,111,40,6,P[3]);
+    g.fillStyle=P[4]; g.beginPath();                        // timon de cola
+    g.moveTo(202,90); g.lineTo(216,58); g.lineTo(214,146); g.closePath(); g.fill();
+    helice(g,206,116,20,P[3]);
+    rr(g,60,158,32,16,P[1],6); rr(g,128,158,32,16,P[1],6); // patines
+    g.globalAlpha=.30; rr(g,40,88,20,54,"#ffffff",10); g.globalAlpha=1;
+    estarcido(g,"S9",150,146,8,P[2]);
+  },
+  sonar(g,P){
+    ci(g,110,110,86,P[4]); ci(g,110,110,76,P[1]);
+    for(let i=1;i<5;i++){ g.globalAlpha=.22+i*0.05;
+      aro(g,110,110,i*16,P[3],3); g.globalAlpha=1; }
+    ci(g,110,110,16,P[4]); ci(g,110,110,10,P[3]); halo(g,110,110,26,P[3]);
+    g.save(); g.translate(110,110); g.rotate(-0.9);          // el barrido
+    g.globalAlpha=.35; g.fillStyle=P[3];
+    g.beginPath(); g.moveTo(0,0); g.arc(0,0,74,-0.34,0.1); g.closePath(); g.fill();
+    g.globalAlpha=1; g.restore();
+    for(let i=0;i<3;i++) ci(g,74+i*30,84,4,P[2]);
+    aro(g,110,110,86,P[2],4);
+    for(let i=0;i<8;i++){ const a=i*0.785;
+      rr(g,110+Math.cos(a)*94-6,110+Math.sin(a)*94-6,12,12,P[4],4); }
+    pernos(g,32,32,156,156,3,P[2]);
+  },
+  torpedo(g,P){
+    g.fillStyle=P[4]; g.beginPath();
+    g.moveTo(8,110); g.lineTo(56,66); g.lineTo(196,66); g.lineTo(196,154);
+    g.lineTo(56,154); g.closePath(); g.fill();
+    g.fillStyle=P[0]; g.beginPath();
+    g.moveTo(24,110); g.lineTo(62,76); g.lineTo(186,76); g.lineTo(186,144);
+    g.lineTo(62,144); g.closePath(); g.fill();
+    cinta(g,88,76,26,68,P[3],P[4]);
+    remaches(g,66,84,182,84,7,2.4,P[2]);
+    ci(g,34,110,9,P[3]); halo(g,34,110,18,P[3]);           // el detonador
+    rr(g,150,58,18,104,P[1],6);
+    for(let i=0;i<4;i++){ const a=i*1.5708+0.78;            // aletas
+      g.save(); g.translate(196,110); g.rotate(a);
+      rr(g,-6,-38,12,38,P[1],4); g.restore(); }
+    helice(g,206,110,16,P[3]);
+    etiqueta(g,104,100,54,22,P[2],P[4]);
+  },
+  escafandra(g,P){
+    rr(g,54,104,112,84,P[0],28); chapa(g,62,112,96,68,P[0],P[1],20);
+    ci(g,110,72,50,P[4]); ci(g,110,72,42,P[1]);
+    ci(g,110,72,32,P[3]); reflejo(g,88,48,34,30,14);
+    for(let i=0;i<3;i++) ln(g,78+i*32,32,78+i*32,112,P[4],5);   // rejas del visor
+    aro(g,110,72,44,P[2],5);
+    for(let i=0;i<8;i++){ const a=i*0.785;
+      ci(g,110+Math.cos(a)*46,72+Math.sin(a)*46,4,P[2]); }
+    rr(g,32,120,24,50,P[1],10); rr(g,164,120,24,50,P[1],10);
+    cable(g,80,104,40,150,20,P[4],5);
+    rr(g,74,164,72,24,P[4],8); rejilla(g,80,170,60,12,5,P[2]);
+    ci(g,110,150,8,P[3]);
+  },
+  juntaPresion(g,P){
+    aro(g,110,110,80,P[4],22);
+    aro(g,110,110,80,P[1],13);
+    ci(g,110,110,58,P[0]); chapa(g,66,66,88,88,P[0],P[1],40);
+    for(let i=0;i<10;i++){ const a=i*0.628;
+      perno(g,110+Math.cos(a)*70,110+Math.sin(a)*70,6,P[2]); }
+    for(let i=0;i<5;i++){ const a=i*1.2566;                 // volante de cierre
+      ln(g,110,110,110+Math.cos(a)*46,110+Math.sin(a)*46,P[4],9); }
+    ci(g,110,110,20,P[4]); ci(g,110,110,13,P[3]);
+    g.globalAlpha=.35; ci(g,96,92,22,"#ffffff"); g.globalAlpha=1;
+    rr(g,26,100,20,20,P[1],5); rr(g,174,100,20,20,P[1],5);
+  },
+  turbinaAgua(g,P){
+    rr(g,20,58,180,104,P[4],26);
+    rr(g,30,68,160,84,P[1],20);
+    ci(g,110,110,54,P[4]); ci(g,110,110,46,P[0]);
+    for(let i=0;i<6;i++){ const a=i*1.047+0.3;              // alabes
+      g.save(); g.translate(110,110); g.rotate(a);
+      g.fillStyle=P[2]; g.beginPath();
+      g.moveTo(0,-8); g.lineTo(44,-20); g.lineTo(44,10); g.lineTo(0,8);
+      g.closePath(); g.fill(); g.restore(); }
+    ci(g,110,110,16,P[4]); ci(g,110,110,10,P[3]);
+    pernos(g,26,64,168,92,3.4,P[2]);
+    rr(g,8,96,16,28,P[1],5); rr(g,196,96,16,28,P[1],5);
+    g.globalAlpha=.28;                                       // la corriente
+    for(let i=0;i<3;i++) ln(g,24,80+i*30,60,80+i*30,P[3],4);
+    g.globalAlpha=1;
+    rr(g,64,166,92,18,P[4],7);
+  },
+  boya(g,P){
+    ci(g,110,150,52,P[4]); ci(g,110,150,44,P[0]);
+    cinta(g,66,132,88,20,P[3],P[4]);
+    rr(g,92,54,36,100,P[1],10);
+    rr(g,80,42,60,18,P[4],7); pernos(g,80,42,60,18,3,P[2]);
+    ci(g,110,32,14,P[4]); ci(g,110,32,9,P[3]); halo(g,110,32,24,P[3]);
+    for(let i=0;i<3;i++) ln(g,86,72+i*22,134,72+i*22,P[4],4);
+    ci(g,110,150,20,P[4]); ci(g,110,150,13,P[2]);
+    cable(g,110,196,110,196,0,P[4],5);
+    ln(g,110,190,110,206,P[1],6);
+    for(let i=0;i<4;i++) ci(g,72+i*26,186,5,P[4]);            // percebes
+    ci(g,150,168,7,P[1]); ci(g,66,164,6,P[1]);
+  },
+  minaMar(g,P){
+    ci(g,110,116,66,P[4]); ci(g,110,116,58,P[0]);
+    chapa(g,72,78,76,76,P[0],P[1],34);
+    for(let i=0;i<8;i++){ const a=i*0.785 - 1.57;             // cuernos
+      const x=110+Math.cos(a)*62, y=116+Math.sin(a)*62;
+      g.save(); g.translate(x,y); g.rotate(a+1.5708);
+      g.fillStyle=P[4]; g.beginPath();
+      g.moveTo(-7,0); g.lineTo(0,-24); g.lineTo(7,0); g.closePath(); g.fill();
+      ci(g,0,-22,4,P[3]); g.restore(); }
+    for(let i=0;i<6;i++){ const a=i*1.047;
+      perno(g,110+Math.cos(a)*40,116+Math.sin(a)*40,5,P[2]); }
+    ci(g,110,116,20,P[4]); ci(g,110,116,13,P[3]); halo(g,110,116,28,P[3]);
+    ln(g,110,182,110,208,P[1],7);
+    ci(g,86,150,6,P[1]); ci(g,140,86,5,P[1]);
+  },
+  cangrejoRep(g,P){
+    for(let s2=-1;s2<=1;s2+=2){
+      for(let i=0;i<3;i++){
+        const x=110+s2*(52+i*8), y=88+i*34;
+        ln(g,110+s2*30,y,x,y+18,P[4],10); ln(g,110+s2*30,y,x,y+18,P[1],6);
+        ln(g,x,y+18,x+s2*22,y+34,P[4],8); ln(g,x,y+18,x+s2*22,y+34,P[1],5);
+        ci(g,x+s2*22,y+34,5,P[2]);
+      }
+    }
+    rr(g,58,88,104,72,P[0],26); chapa(g,66,96,88,56,P[0],P[1],18);
+    pernos(g,62,92,96,64,3.2,P[2]);
+    ci(g,88,116,12,P[4]); ci(g,88,116,7,P[3]);
+    ci(g,132,116,12,P[4]); ci(g,132,116,7,P[3]);
+    rr(g,86,64,48,24,P[1],8);
+    ln(g,74,64,58,38,P[4],6); ln(g,146,64,162,38,P[4],6);     // pinzas alzadas
+    ci(g,58,38,9,P[4]); ci(g,162,38,9,P[4]);
+    ci(g,58,38,5,P[3]); ci(g,162,38,5,P[3]);
+    cinta(g,66,142,88,12,P[3],P[4]);
+  },
+  cableSub(g,P){
+    tubo(g,0,150,220,150,P[1],P[4],30);
+    rr(g,52,66,116,110,P[4],22);                              // caja de empalme
+    chapa(g,62,76,96,90,P[0],P[1],16);
+    pernos(g,58,72,104,98,3.6,P[2]);
+    for(let i=0;i<3;i++){ rr(g,74,88+i*26,72,16,P[1],5);
+                          rr(g,78,92+i*26,20,8,P[3],3); }
+    ci(g,110,158,15,P[4]); ci(g,110,158,9,P[3]);
+    for(let i=0;i<4;i++) ci(g,26+i*10,150,7,P[4]);            // fibras a la vista
+    ln(g,10,138,44,132,P[3],3); ln(g,10,162,40,170,P[3],3);
+    g.globalAlpha=.4; rr(g,176,140,44,20,P[1],8); g.globalAlpha=1;
+    etiqueta(g,84,178,52,20,P[2],P[4]);
+  },
+  focoAbisal(g,P){
+    rr(g,72,168,76,26,P[4],9); pernos(g,72,168,76,26,3,P[2]);
+    ln(g,110,168,110,132,P[1],14);
+    g.save(); g.translate(110,96); g.rotate(0.2);
+    rr(g,-58,-46,116,92,P[4],26);
+    rr(g,-48,-36,96,72,P[1],20);
+    ci(g,0,0,34,P[2]); ci(g,0,0,26,"#ffffff");
+    g.globalAlpha=.30; g.fillStyle=P[3];                      // el cono de luz
+    g.beginPath(); g.moveTo(0,0); g.lineTo(150,-92); g.lineTo(150,92); g.closePath(); g.fill();
+    g.globalAlpha=1;
+    aro(g,0,0,36,P[4],6);
+    for(let i=0;i<4;i++) ln(g,-58,-30+i*20,58,-30+i*20,P[4],3);
+    g.restore();
+    ci(g,84,140,6,P[1]); ci(g,138,146,5,P[1]);
+  },
+  jDraga(g,P){
+    rr(g,16,92,188,86,P[4],22);                                // casco
+    chapa(g,26,100,168,70,P[0],P[1],16);
+    remaches(g,24,108,196,108,10,2.8,P[2]);
+    rr(g,44,58,132,38,P[1],14);                                // puente
+    for(let i=0;i<4;i++){ ci(g,62+i*32,76,10,P[4]); ci(g,62+i*32,76,6,P[3]); }
+    // la boca de la draga: cuchara con dientes
+    g.fillStyle=P[4]; g.beginPath();
+    g.moveTo(30,178); g.lineTo(190,178); g.lineTo(172,214); g.lineTo(48,214);
+    g.closePath(); g.fill();
+    g.fillStyle=P[1]; g.beginPath();
+    g.moveTo(42,182); g.lineTo(178,182); g.lineTo(164,204); g.lineTo(56,204);
+    g.closePath(); g.fill();
+    for(let i=0;i<7;i++){
+      g.fillStyle=P[2]; g.beginPath();
+      g.moveTo(46+i*21,204); g.lineTo(56+i*21,204); g.lineTo(51+i*21,220);
+      g.closePath(); g.fill(); }
+    ln(g,60,178,60,96,P[4],9); ln(g,160,178,160,96,P[4],9);     // cilindros
+    muelle(g,60,150,60,110,5,P[2],3); muelle(g,160,150,160,110,5,P[2],3);
+    rr(g,0,116,20,40,P[1],6); rr(g,200,116,20,40,P[1],6);
+    cinta(g,26,150,168,14,P[3],P[4]);
+    escarapela(g,110,130,14,P[4],P[3]);
+    ci(g,44,164,6,P[1]); ci(g,176,160,5,P[1]);
+  },
+  /* --- SECTOR 10: MINA PROFUNDA --- */
+  cabezaTunel(g,P){
+    ci(g,110,110,92,P[4]); ci(g,110,110,82,P[1]);
+    for(let i=0;i<3;i++) aro(g,110,110,30+i*24,P[4],9);
+    for(let i=0;i<12;i++){ const a=i*0.5236;                  // picas de corte
+      const x=110+Math.cos(a)*68, y=110+Math.sin(a)*68;
+      g.save(); g.translate(x,y); g.rotate(a);
+      g.fillStyle=P[2]; g.beginPath();
+      g.moveTo(-8,-8); g.lineTo(20,0); g.lineTo(-8,8); g.closePath(); g.fill();
+      g.restore(); }
+    for(let i=0;i<6;i++){ const a=i*1.047+0.26;
+      ci(g,110+Math.cos(a)*40,110+Math.sin(a)*40,10,P[4]);
+      ci(g,110+Math.cos(a)*40,110+Math.sin(a)*40,6,P[2]); }
+    ci(g,110,110,24,P[4]); ci(g,110,110,16,P[3]); halo(g,110,110,32,P[3]);
+    g.globalAlpha=.28; ci(g,84,80,26,"#ffffff"); g.globalAlpha=1;
+  },
+  broca(g,P){
+    rr(g,86,14,48,44,P[1],12); pernos(g,86,14,48,44,3.2,P[2]);
+    rr(g,92,58,36,40,P[4],8);
+    g.fillStyle=P[4]; g.beginPath();                           // el cuerpo conico
+    g.moveTo(74,98); g.lineTo(146,98); g.lineTo(120,204); g.lineTo(100,204);
+    g.closePath(); g.fill();
+    g.fillStyle=P[0]; g.beginPath();
+    g.moveTo(84,104); g.lineTo(136,104); g.lineTo(116,196); g.lineTo(104,196);
+    g.closePath(); g.fill();
+    for(let i=0;i<5;i++){                                       // helice de corte
+      const y=110+i*20, w=52-i*8;
+      g.save(); g.translate(110,y); g.rotate(0.32);
+      rr(g,-w/2,-6,w,12,P[2],5); g.restore(); }
+    ci(g,110,204,10,P[2]);
+    ln(g,74,98,146,98,P[3],4);
+    escarapela(g,110,76,12,P[4],P[3]);
+  },
+  vagoneta(g,P){
+    g.fillStyle=P[4]; g.beginPath();
+    g.moveTo(18,70); g.lineTo(202,70); g.lineTo(178,166); g.lineTo(42,166);
+    g.closePath(); g.fill();
+    g.fillStyle=P[1]; g.beginPath();
+    g.moveTo(32,80); g.lineTo(188,80); g.lineTo(168,156); g.lineTo(52,156);
+    g.closePath(); g.fill();
+    for(let i=0;i<7;i++) ln(g,40+i*24,80,48+i*22,156,P[4],4);   // costillas
+    for(let i=0;i<9;i++){                                        // el mineral
+      const x=48+((i*29)%140), y=62+((i*13)%16);
+      ci(g,x,y,9+(i%3)*3,i%3===0?P[3]:P[0]);
+      g.globalAlpha=.5; ci(g,x-3,y-3,4,"#ffffff"); g.globalAlpha=1; }
+    rr(g,30,166,160,14,P[4],5);
+    ci(g,66,190,22,P[4]); ci(g,66,190,14,P[1]); ci(g,66,190,6,P[2]);
+    ci(g,154,190,22,P[4]); ci(g,154,190,14,P[1]); ci(g,154,190,6,P[2]);
+    ln(g,10,204,210,204,P[4],7);                                 // el rail
+    remaches(g,36,74,184,74,7,2.4,P[2]);
+  },
+  entibado(g,P){
+    rr(g,26,14,34,192,P[4],7); rr(g,32,20,22,180,P[1],5);
+    rr(g,160,14,34,192,P[4],7); rr(g,166,20,22,180,P[1],5);
+    rr(g,18,14,184,32,P[4],8); rr(g,26,20,168,20,P[1],5);
+    for(let i=0;i<7;i++){ perno(g,40+i*24,30,5,P[2]); }
+    ln(g,60,46,160,120,P[4],11); ln(g,60,46,160,120,P[1],7);     // tornapuntas
+    ln(g,160,46,60,120,P[4],11); ln(g,160,46,60,120,P[1],7);
+    perno(g,43,52,6,P[2]); perno(g,177,52,6,P[2]);
+    perno(g,43,190,6,P[2]); perno(g,177,190,6,P[2]);
+    rr(g,66,150,88,20,P[4],6);                                   // travesano roto
+    g.globalAlpha=.5; rr(g,120,150,34,20,P[1],6); g.globalAlpha=1;
+    cinta(g,18,178,184,14,P[3],P[4]);
+  },
+  ventGaleria(g,P){
+    rr(g,14,14,192,192,P[4],28);
+    rr(g,26,26,168,168,P[1],22);
+    ci(g,110,110,74,P[4]); ci(g,110,110,66,P[0]);
+    for(let i=0;i<5;i++){ const a=i*1.2566+reloj*0;             // aspas
+      g.save(); g.translate(110,110); g.rotate(a);
+      g.fillStyle=P[2]; g.beginPath();
+      g.moveTo(0,-10); g.lineTo(58,-26); g.lineTo(58,14); g.lineTo(0,10);
+      g.closePath(); g.fill(); g.restore(); }
+    ci(g,110,110,20,P[4]); ci(g,110,110,12,P[3]);
+    for(let i=0;i<4;i++){ const q=[[30,30],[164,30],[30,164],[164,164]][i];
+      perno(g,q[0],q[1],7,P[2]); }
+    g.globalAlpha=.35;
+    for(let i=0;i<4;i++) aro(g,110,110,78+i*6,P[3],2);
+    g.globalAlpha=1;
+    rr(g,14,96,10,28,P[1],4); rr(g,196,96,10,28,P[1],4);
+    etiqueta(g,80,182,60,20,P[2],P[4]);
+  },
+  sensorSismico(g,P){
+    rr(g,40,168,140,32,P[4],10); pernos(g,40,168,140,32,3.6,P[2]);
+    rr(g,58,74,104,96,P[0],16); chapa(g,66,82,88,80,P[0],P[1],12);
+    pantallita(g,72,90,76,42,P[4],P[3]);
+    g.strokeStyle=P[3]; g.lineWidth=3; g.beginPath();            // la traza
+    for(let i=0;i<=18;i++){
+      const x=76+i*4, y=111 + (i%5===2?-14:i%3===0?10:0);
+      i?g.lineTo(x,y):g.moveTo(x,y); }
+    g.stroke();
+    for(let i=0;i<3;i++){ ci(g,80+i*30,148,8,P[4]); ci(g,80+i*30,148,5,i?P[2]:P[3]); }
+    ln(g,110,74,110,36,P[1],9);                                   // el mastil
+    ci(g,110,30,13,P[4]); ci(g,110,30,8,P[3]); halo(g,110,30,22,P[3]);
+    ln(g,86,42,134,42,P[4],4);
+    muelle(g,66,168,66,146,4,P[2],3); muelle(g,154,168,154,146,4,P[2],3);
+  },
+  trituradora(g,P){
+    rr(g,16,58,188,110,P[4],20);
+    chapa(g,26,66,168,94,P[0],P[1],14);
+    g.fillStyle=P[4]; g.beginPath();                              // tolva
+    g.moveTo(30,58); g.lineTo(190,58); g.lineTo(150,20); g.lineTo(70,20);
+    g.closePath(); g.fill();
+    for(let s2=0;s2<2;s2++){                                       // dos rodillos
+      const cx=74+s2*72;
+      ci(g,cx,112,32,P[1]); ci(g,cx,112,24,P[4]);
+      for(let i=0;i<8;i++){ const a=i*0.785;
+        g.save(); g.translate(cx,112); g.rotate(a);
+        g.fillStyle=P[2]; g.beginPath();
+        g.moveTo(-6,-30); g.lineTo(6,-30); g.lineTo(0,-42); g.closePath(); g.fill();
+        g.restore(); }
+      ci(g,cx,112,9,P[3]); }
+    for(let i=0;i<5;i++) ci(g,52+i*30,40,7,P[0]);                  // mineral cayendo
+    cinta(g,26,148,168,14,P[3],P[4]);
+    rr(g,8,168,204,20,P[4],7);
+    remaches(g,24,64,196,64,9,2.6,P[2]);
+  },
+  carrete(g,P){
+    ci(g,110,110,90,P[4]); ci(g,110,110,80,P[1]);
+    ci(g,110,110,64,P[4]);
+    for(let i=0;i<9;i++){                                          // vueltas de cable
+      g.globalAlpha = i%2 ? .9 : .7;
+      aro(g,110,110,26+i*4.2,i%2?P[0]:P[2],4); }
+    g.globalAlpha=1;
+    ci(g,110,110,22,P[4]); ci(g,110,110,14,P[2]);
+    for(let i=0;i<6;i++){ const a=i*1.047;
+      perno(g,110+Math.cos(a)*72,110+Math.sin(a)*72,6,P[2]); }
+    cable(g,110,26,200,58,-24,P[0],7);                             // la punta suelta
+    ci(g,200,58,8,P[3]);
+    rr(g,20,178,180,24,P[4],8); pernos(g,20,178,180,24,3.4,P[2]);
+    ln(g,44,178,44,140,P[1],8); ln(g,176,178,176,140,P[1],8);
+  },
+  lamparaMina(g,P){
+    ln(g,110,0,110,44,P[4],6);
+    rr(g,74,40,72,26,P[4],10); pernos(g,74,40,72,26,3,P[2]);
+    g.fillStyle=P[4]; g.beginPath();                                // pantalla conica
+    g.moveTo(46,120); g.lineTo(174,120); g.lineTo(140,66); g.lineTo(80,66);
+    g.closePath(); g.fill();
+    g.fillStyle=P[1]; g.beginPath();
+    g.moveTo(60,112); g.lineTo(160,112); g.lineTo(134,74); g.lineTo(86,74);
+    g.closePath(); g.fill();
+    ci(g,110,120,26,P[2]); ci(g,110,120,18,"#ffffff");
+    g.globalAlpha=.35; g.fillStyle=P[3];
+    g.beginPath(); g.moveTo(84,124); g.lineTo(136,124); g.lineTo(186,214);
+    g.lineTo(34,214); g.closePath(); g.fill();
+    g.globalAlpha=1;
+    for(let i=0;i<5;i++) ln(g,60+i*25,112,60+i*25,120,P[4],3);
+    aro(g,110,120,28,P[4],5);
+    ci(g,84,150,5,P[4]); ci(g,142,158,4,P[4]);
+  },
+  compuerta(g,P){
+    rr(g,10,18,200,184,P[4],16);
+    rr(g,22,30,176,160,P[1],12);
+    chapa(g,32,40,156,140,P[0],P[1],8);
+    for(let i=0;i<4;i++) rr(g,40,50+i*36,140,10,P[4],4);           // refuerzos
+    cinta(g,32,150,156,20,P[3],P[4]);
+    ci(g,110,102,40,P[4]); ci(g,110,102,32,P[1]);
+    for(let i=0;i<5;i++){ const a=i*1.2566;                         // volante
+      ln(g,110,102,110+Math.cos(a)*30,102+Math.sin(a)*30,P[2],8); }
+    ci(g,110,102,12,P[4]); ci(g,110,102,7,P[3]);
+    for(let i=0;i<10;i++){ const q=i<5?[24,42+i*32]:[196,42+(i-5)*32];
+      perno(g,q[0],q[1],6,P[2]); }
+    pantallita(g,144,52,44,24,P[4],P[3]);
+    estarcido(g,"R3",40,190,9,P[2]);
+  },
+  cintaTrans(g,P){
+    rr(g,4,86,212,48,P[4],20);
+    rr(g,14,94,192,32,P[1],14);
+    for(let i=0;i<11;i++) rr(g,18+i*18,96,10,28,P[4],3);           // tablillas
+    ci(g,26,110,28,P[4]); ci(g,26,110,20,P[1]); ci(g,26,110,8,P[2]);
+    ci(g,194,110,28,P[4]); ci(g,194,110,20,P[1]); ci(g,194,110,8,P[2]);
+    for(let i=0;i<4;i++){ const x=60+i*32;                          // mineral encima
+      ci(g,x,80,10,P[0]); g.globalAlpha=.45; ci(g,x-3,77,4,"#ffffff"); g.globalAlpha=1; }
+    ln(g,44,134,44,190,P[4],10); ln(g,176,134,176,190,P[4],10);     // patas
+    ln(g,44,190,80,190,P[4],7); ln(g,176,190,140,190,P[4],7);
+    ln(g,60,134,160,134,P[1],5);
+    remaches(g,16,92,204,92,10,2.4,P[2]);
+    cinta(g,4,138,212,12,P[3],P[4]);
+  },
+  jGusano(g,P){
+    // Boca frontal: anillos de dientes que se estrechan hacia el centro.
+    for(let i=0;i<4;i++){
+      const r0 = 100-i*20;
+      ci(g,110,110,r0,i%2?P[4]:P[1]);
+      const n = 14-i*2;
+      for(let k=0;k<n;k++){ const a=k*(6.2832/n)+i*0.2;
+        g.save(); g.translate(110,110); g.rotate(a);
+        g.fillStyle=P[2]; g.beginPath();
+        g.moveTo(-6,-r0); g.lineTo(6,-r0); g.lineTo(0,-r0+16); g.closePath(); g.fill();
+        g.restore(); }
+    }
+    ci(g,110,110,26,"#150f33");
+    g.globalAlpha=.5; ci(g,110,110,20,P[3]); g.globalAlpha=1;
+    ci(g,110,110,11,P[3]); halo(g,110,110,30,P[3]);
+    // placas del cuerpo asomando por detras
+    for(let i=0;i<8;i++){ const a=i*0.785+0.39;
+      const x=110+Math.cos(a)*104, y=110+Math.sin(a)*104;
+      g.save(); g.translate(x,y); g.rotate(a);
+      rr(g,-14,-9,26,18,P[1],6); rr(g,-10,-5,18,10,P[4],4);
+      g.restore(); }
+    for(let i=0;i<10;i++){ const a=i*0.628+0.3;                     // remaches del morro
+      perno(g,110+Math.cos(a)*88,110+Math.sin(a)*88,5,P[2]); }
+    g.globalAlpha=.30; ci(g,80,74,30,"#ffffff"); g.globalAlpha=1;
+  },
   jAsimilado(g,P){
     const H = heroeCaido();
     const CAR = mezcla(H.piel, "#6a6f86", 0.72);        // lo que queda de piel
@@ -3124,7 +3734,41 @@ function capaFondo(zi, i){
       g.moveTo(x - w, pie); g.lineTo(x - w*0.34, pie - h*0.68);
       g.lineTo(x + w*0.18, pie - h); g.lineTo(x + w*0.66, pie - h*0.42);
       g.lineTo(x + w, pie); g.closePath(); g.fill();
-    } else {
+    }
+    else if(z.horiz === "orbital"){
+      // Chatarra a la deriva: losas y paneles girados, sin tocar suelo.
+      g.save(); g.translate(x, pie - h*0.55); g.rotate((r()-0.5)*1.1);
+      rr(g, -w*0.5, -h*0.22, w, h*0.44, c1, h*0.1);
+      rr(g, -w*0.78, -h*0.07, w*0.3, h*0.14, col2, 1);
+      rr(g,  w*0.48, -h*0.07, w*0.3, h*0.14, col2, 1);
+      g.restore();
+    }
+    else if(z.horiz === "abisal"){
+      // Lomas de sedimento: el fondo del mar no tiene esquinas.
+      g.fillStyle = c1; g.beginPath();
+      g.moveTo(x - w, pie);
+      g.bezierCurveTo(x - w*0.5, pie - h*1.1, x + w*0.5, pie - h*1.1, x + w, pie);
+      g.closePath(); g.fill();
+      if(P.d <= 3){                                   // un pecio asomando
+        g.globalAlpha = .7;
+        rr(g, x - w*0.22, pie - h*0.62, w*0.44, h*0.3, col2, h*0.08);
+        g.globalAlpha = 1;
+      }
+    }
+    else if(z.horiz === "mina"){
+      // Paredes de roca dentadas, y alguna veta que coge la luz.
+      g.fillStyle = c1; g.beginPath();
+      g.moveTo(x - w, pie);
+      g.lineTo(x - w*0.62, pie - h*0.55); g.lineTo(x - w*0.2, pie - h*0.34);
+      g.lineTo(x + w*0.1, pie - h);       g.lineTo(x + w*0.55, pie - h*0.48);
+      g.lineTo(x + w, pie); g.closePath(); g.fill();
+      if(P.d <= 3){
+        g.globalAlpha = .5; g.fillStyle = luz;
+        g.fillRect(x - w*0.1, pie - h*0.6, Math.max(1, w*0.05), h*0.28);
+        g.globalAlpha = 1;
+      }
+    }
+    else {
       rr(g, x - w/2, pie - h, w, h, c1, Math.max(1, w*0.06));
       // Densidad de detalle: solo los planos cercanos tienen ventanas. En los
       // lejanos el ojo no las resolveria, y ponerlas los acerca.
@@ -3366,12 +4010,104 @@ function pico(g, x, base, w, h, c){
   g.lineTo(x + w, base);
   g.closePath(); g.fill();
 }
+/* ---------- LO QUE HAY ARRIBA ----------
+   Cada uno de los tres sectores nuevos se reconoce por el techo antes que por
+   los aparatos: el planeta que ocupa media pantalla, la superficie del mar por
+   la que se cuela la luz, o la roca de la que cuelgan las estalactitas. */
+function techoDe(g, z, zi){
+  const r = prng(zi*7717);
+  if(z.techo === "planeta"){
+    /* El planeta entero, no un trozo de curva. Probe ponerlo enorme y cortado
+       por arriba y se leia como una colina: para que diga PLANETA tiene que
+       verse el disco completo, con su terminador y su halo. */
+    const px = CW*0.70, py = HOR*0.34, pr = HOR*0.40;
+    g.save();
+    g.globalAlpha = .16; ci(g, px, py, pr*1.22, z.luz);        // atmosfera
+    g.globalAlpha = .34; ci(g, px, py, pr*1.09, z.luz);
+    g.globalAlpha = 1;   ci(g, px, py, pr, "#25409c");
+    // continentes: manchas fijas, sembradas con la misma semilla
+    g.save();
+    g.beginPath(); g.arc(px, py, pr, 0, 6.2832); g.clip();
+    g.globalAlpha = .55; g.fillStyle = "#16265f";
+    for(let i=0;i<9;i++){
+      const a = r()*6.28, d = r()*pr*0.9;
+      g.beginPath();
+      g.ellipse(px + Math.cos(a)*d, py + Math.sin(a)*d,
+                pr*(0.14 + r()*0.24), pr*(0.07 + r()*0.13), r()*3, 0, 6.2832);
+      g.fill();
+    }
+    // terminador: la mitad que no ve el sol
+    g.globalAlpha = .62; g.fillStyle = "#05050f";
+    g.beginPath(); g.ellipse(px + pr*0.52, py, pr*0.95, pr, 0, 0, 6.2832); g.fill();
+    g.restore();
+    g.globalAlpha = .9;                                        // el filo iluminado
+    g.strokeStyle = "#cfe6ff"; g.lineWidth = Math.max(1.5, U*1.4);
+    g.beginPath(); g.arc(px, py, pr, Math.PI*0.55, Math.PI*1.45); g.stroke();
+    g.globalAlpha = 1; g.restore();
+  }
+  else if(z.techo === "superficie"){
+    // La superficie del mar, lejisimos, y los haces de luz que bajan.
+    g.save();
+    g.globalAlpha = .5; rr(g, -10, -4, CW+20, HOR*0.055, "#8ff2ff", 0);
+    g.globalAlpha = .2;
+    for(let i=0;i<9;i++){
+      const x = (i/8)*CW + Math.sin(reloj*0.25 + i)*CW*0.02;
+      g.fillStyle = "#bffbff";
+      g.beginPath();
+      g.moveTo(x - CW*0.012, 0); g.lineTo(x + CW*0.012, 0);
+      g.lineTo(x + CW*0.075, HOR*0.92); g.lineTo(x - CW*0.055, HOR*0.92);
+      g.closePath(); g.fill();
+    }
+    g.globalAlpha = 1; g.restore();
+  }
+  else if(z.techo === "roca"){
+    // Boveda de roca con estalactitas: cierra la pantalla por arriba y deja
+    // claro que aqui no hay cielo ninguno.
+    g.save();
+    const h = HOR*0.30;
+    g.fillStyle = "#1d1009"; g.fillRect(0, 0, CW, h*0.62);
+    g.fillStyle = "#2a170d";
+    g.beginPath(); g.moveTo(0, 0); g.lineTo(CW, 0); g.lineTo(CW, h*0.5);
+    for(let x = CW; x >= 0; x -= CW/14){
+      const k = r();
+      g.lineTo(x, h*(0.34 + k*0.16));
+      g.lineTo(x - CW/28, h*(0.5 + k*0.9));       // la punta
+    }
+    g.closePath(); g.fill();
+    g.globalAlpha = .35; g.fillStyle = z.luz;      // vetas de mineral
+    for(let i=0;i<12;i++){
+      const x = r()*CW, y = r()*h*0.5;
+      g.fillRect(x, y, Math.max(2, CW*0.02*r()), Math.max(1, U*0.8));
+    }
+    g.globalAlpha = 1; g.restore();
+  }
+}
+
 function dibujarHorizonte(g, z, zi, t){
   const S1 = silueta(zi);
   g.save(); g.translate(camaraX()*PAR.horLejos, camaraY()*PAR.horLejos*0.5);
   S1.lejos.forEach(s => {
     const x = s.x*CW, w = s.w*CW, h = s.h*HOR;
     if(z.horiz === "chatarra") pico(g, x, HOR, w, h, z.silu);
+    else if(z.horiz === "orbital"){
+      // No se apoyan en nada: flotan, y por eso van despegadas del horizonte.
+      const fl = Math.sin(t*0.5 + s.l*7)*HOR*0.02;
+      rr(g, x - w/2, HOR - h - HOR*0.06 + fl, w, h*0.5, z.silu, w*0.2);
+      ln(g, x - w*0.7, HOR - h - HOR*0.06 + fl + h*0.25,
+            x + w*0.7, HOR - h - HOR*0.06 + fl + h*0.25, z.silu, Math.max(1, U));
+    }
+    else if(z.horiz === "abisal"){
+      // Pecios volcados: nada esta recto en el fondo del mar.
+      g.save(); g.translate(x, HOR); g.rotate((s.k-.5)*.7);
+      rr(g, -w/2, -h*0.8, w, h*0.8, z.silu, h*0.25);
+      g.restore();
+    }
+    else if(z.horiz === "mina"){
+      // Bocas de galeria: huecos negros en la pared, no edificios.
+      rr(g, x - w/2, HOR - h, w, h, z.silu, 2);
+      g.fillStyle = "#120906";
+      g.beginPath(); g.arc(x, HOR, w*0.30, Math.PI, 0); g.closePath(); g.fill();
+    }
     else if(z.horiz === "monolitos"){
       g.save(); g.translate(x, HOR); g.rotate((s.k-.5)*.24);
       rr(g, -w/2, -h, w, h, z.silu, 1); g.restore();
@@ -3398,6 +4134,48 @@ function dibujarHorizonte(g, z, zi, t){
       rr(g, x - w/2, HOR - h, w, h, C, 1);
       for(let j=0;j<4;j++) rr(g, x-w/2+1.5*U, HOR-h+3*U+j*(h/4.6), w-3*U, 1.4*U, z.luz, 0);
     }
+    else if(z.horiz === "orbital"){
+      // Modulos y paneles de una estacion desarmada, a la deriva.
+      const fl = Math.sin(t*0.7 + s.l*5)*HOR*0.025;
+      g.save(); g.translate(x, HOR - h*0.5 + fl); g.rotate((s.k-.5)*.5);
+      rr(g, -w*0.22, -h*0.32, w*0.44, h*0.64, C, w*0.14);
+      rr(g, -w*0.9, -h*0.10, w*0.62, h*0.20, C, 2);      // panel izquierdo
+      rr(g,  w*0.28, -h*0.10, w*0.62, h*0.20, C, 2);      // panel derecho
+      for(let j=0;j<3;j++){
+        rr(g, -w*0.86 + j*w*0.19, -h*0.07, w*0.14, h*0.14, z.luz, 0);
+        rr(g,  w*0.32 + j*w*0.19, -h*0.07, w*0.14, h*0.14, z.luz, 0);
+      }
+      g.globalAlpha = .55 + Math.sin(t*3 + s.l*9)*.45;
+      ci(g, 0, -h*0.34, 1.7*U, "#ff4d6d");                 // baliza
+      g.globalAlpha = 1;
+      g.restore();
+    }
+    else if(z.horiz === "abisal"){
+      // Un pecio tumbado y una fumarola: el fondo tiene relieve, no skyline.
+      g.save(); g.translate(x, HOR + 2); g.rotate((s.k-.5)*.55);
+      rr(g, -w*0.5, -h*0.62, w, h*0.62, C, h*0.2);
+      for(let j=0;j<3;j++) ci(g, -w*0.28 + j*w*0.28, -h*0.34, w*0.07, "#0a2530");
+      g.restore();
+      if(s.k > .55){                                        // fumarola
+        g.globalAlpha = .22; g.fillStyle = z.luz;
+        for(let j=0;j<4;j++){
+          const yy = HOR - h*0.7 - ((t*26*U + j*30*U + s.l*90) % (HOR*0.55));
+          ci(g, x + Math.sin(yy*0.05 + s.l*6)*4*U, yy, (2 + j)*U, z.luz);
+        }
+        g.globalAlpha = 1;
+      }
+    }
+    else if(z.horiz === "mina"){
+      // Entibado: los puntales de madera y acero que sujetan la galeria.
+      rr(g, x - w*0.42, HOR - h, w*0.13, h, C, 1);
+      rr(g, x + w*0.29, HOR - h, w*0.13, h, C, 1);
+      rr(g, x - w*0.5,  HOR - h, w, h*0.16, C, 1);
+      if(s.k > .5){                                         // lampara colgada
+        ln(g, x, HOR - h + h*0.16, x, HOR - h + h*0.16 + 6*U, C, Math.max(1, U));
+        g.globalAlpha = .35; ci(g, x, HOR - h + h*0.16 + 8*U, 7*U, z.luz);
+        g.globalAlpha = 1;   ci(g, x, HOR - h + h*0.16 + 8*U, 2.2*U, z.luz);
+      }
+    }
     else if(z.horiz === "chimeneas"){
       rr(g, x - w*.24, HOR - h, w*.48, h, C, 1);
       rr(g, x - w*.32, HOR - h - 2.5*U, w*.64, 3.5*U, C, 1);
@@ -3414,6 +4192,57 @@ function dibujarHorizonte(g, z, zi, t){
     }
   });
   g.restore();
+}
+
+/* ---------- LO QUE FLOTA ----------
+   Las motas de siempre valen para un vertedero, pero no para el fondo del mar.
+   Cada uno de los sectores nuevos tiene lo suyo: burbujas que suben y se
+   ensanchan, polvo en suspension que casi no se mueve porque no hay aire que lo
+   empuje, y polvillo de mina que cae despacio con alguna chispa subiendo.     */
+let ambP = [], ambZ = -1;
+function initAmb(zi){
+  ambZ = zi;
+  ambP = [];
+  const n = CW < 420 ? 22 : 34;
+  for(let i=0;i<n;i++)
+    ambP.push({ x:Math.random()*CW, y:Math.random()*CH,
+                r:rnd(0.7,3.4)*U, f:Math.random()*6.28,
+                v:rnd(.45,1.5), k:Math.random() });
+}
+function dibujarAmbiente(g, dt, z, zi){
+  if(!z.amb) return;
+  if(zi !== ambZ || !ambP.length) initAmb(zi);
+  const modo = z.amb;
+  ambP.forEach(p => {
+    if(modo === "burbujas"){
+      p.y -= (26 + p.v*44)*U*dt;                       // suben, y cuanto mas
+      p.x += Math.sin(reloj*1.7 + p.f)*11*U*dt;        // grandes, mas rapido
+      if(p.y < -6*U){ p.y = CH + 6*U; p.x = Math.random()*CW; }
+      g.globalAlpha = .30 + p.k*0.25;
+      aro(g, p.x, p.y, p.r*1.5, "#dffbf5", Math.max(1, U*0.7));
+      g.globalAlpha = .16;
+      ci(g, p.x - p.r*0.4, p.y - p.r*0.4, p.r*0.5, "#ffffff");
+    }
+    else if(modo === "polvoOrbital"){
+      // Sin aire no hay caida ni remolino: deriva recta y lentisima.
+      p.x += Math.cos(p.f)*7*U*dt*p.v;
+      p.y += Math.sin(p.f)*7*U*dt*p.v;
+      if(p.x < -4) p.x = CW+4; if(p.x > CW+4) p.x = -4;
+      if(p.y < -4) p.y = CH+4; if(p.y > CH+4) p.y = -4;
+      g.globalAlpha = .35 + p.k*0.4;
+      g.fillStyle = p.k > .7 ? "#ffffff" : z.luz;
+      g.fillRect(p.x|0, p.y|0, Math.max(1, p.r*0.7), Math.max(1, p.r*0.7));
+    }
+    else if(modo === "polvo"){
+      p.y += (12 + p.v*20)*U*dt;                       // cae despacio
+      p.x += Math.sin(reloj*0.8 + p.f)*7*U*dt;
+      if(p.y > CH + 4){ p.y = -4; p.x = Math.random()*CW; }
+      g.globalAlpha = .18 + p.k*0.24;
+      g.fillStyle = p.k > .82 ? z.luz : "#c9a07a";
+      g.fillRect(p.x|0, p.y|0, Math.max(1, p.r*0.6), Math.max(1, p.r*0.6));
+    }
+  });
+  g.globalAlpha = 1;
 }
 
 let motas = [];
@@ -6300,15 +7129,21 @@ function dibujar(dt){
   gr.addColorStop(0, z.cielo[2]); gr.addColorStop(.5, z.cielo[1]); gr.addColorStop(1, z.cielo[0]);
   ctx.fillStyle = gr; ctx.fillRect(0,0,CW,HOR+1);
 
-  E.cielo.forEach(s => {
-    ctx.globalAlpha = .35 + Math.abs(Math.sin(reloj*1.6 + s.k*11))*.6;
-    ctx.fillStyle = s.k > .5 ? "#ffffff" : z.luz;
-    ctx.fillRect((s.x*CW)|0, (s.y*HOR*.8)|0, s.s, s.s);
-  });
-  ctx.globalAlpha = 1;
+  // Estrellas: en la mina no hay cielo, y bajo el agua lo que brilla son motas.
+  if(z.techo !== "roca"){
+    E.cielo.forEach(s => {
+      ctx.globalAlpha = (.35 + Math.abs(Math.sin(reloj*1.6 + s.k*11))*.6)
+                        * (z.techo === "superficie" ? .5 : 1);
+      ctx.fillStyle = s.k > .5 ? "#ffffff" : z.luz;
+      ctx.fillRect((s.x*CW)|0, (s.y*HOR*.8)|0, s.s, s.s);
+    });
+    ctx.globalAlpha = 1;
+  }
+  if(z.techo) techoDe(ctx, z, zi);
 
   // Astro PARTIDO, con su anillo de escombros: es el cielo de un mundo al que
-  // ya le paso algo, no un planeta decorativo.
+  // ya le paso algo, no un planeta decorativo. Solo donde se ve el cielo.
+  if(!z.techo){
   const ax = CW*.80, ay = HOR*.24, ar = CH*.055;
   ctx.globalAlpha = .14; ci(ctx, ax, ay, ar*2.1, z.luz);
   ctx.globalAlpha = .85; ci(ctx, ax, ay, ar, z.luz);
@@ -6329,6 +7164,7 @@ function dibujar(dt){
                  Math.max(1,U*0.9), Math.max(1,U*0.9));
   }
   ctx.globalAlpha = 1;
+  }
 
   dibujarPlanos(ctx, zi);                 // tres planos lejanos, desenfocados
   dibujarHorizonte(ctx, z, zi, reloj);
@@ -6544,6 +7380,7 @@ function dibujar(dt){
   dibujarPunos(ctx);
   dibujarLluvia(ctx);
   dibujarChispa(ctx);
+  dibujarAmbiente(ctx, dt, z, zi);
 
   dibujarFrente(ctx, zi);        // chatarra colosal, delante de la accion
 
@@ -6678,7 +7515,9 @@ function frame(now){
       if(p.quieto){
         p.vgir = 0;                              // ya esta en el suelo
       } else {
-        p.vy += 300*U*dt*(p.grav || 1);
+        const F = fisica();
+        p.vy += 300*U*dt*(p.grav || 1)*F.g;
+        if(F.roz){ const k = Math.max(0, 1 - F.roz*dt); p.vx *= k; p.vy *= k; }
         p.x += p.vx*dt; p.y += p.vy*dt;
         p.gir += p.vgir*dt; p.vgir *= 0.995;
         if(p.y >= p.suelo){                      // aterriza
@@ -6692,7 +7531,12 @@ function frame(now){
         }
       }
     }
-    else if(p.t !== "b"){ p.vy += 300*U*dt; p.x += p.vx*dt; p.y += p.vy*dt; }
+    else if(p.t !== "b"){
+      const F = fisica();
+      p.vy += 300*U*dt*F.g;
+      if(F.roz){ const k = Math.max(0, 1 - F.roz*dt); p.vx *= k; p.vy *= k; }
+      p.x += p.vx*dt; p.y += p.vy*dt;
+    }
   });
   if(parts.length > 320) parts.splice(0, parts.length - 320);   // techo de restos
   if(parts.length) parts = parts.filter(p => p.life > 0);
@@ -6830,8 +7674,11 @@ const MUNDO = [
   {n:100, t:"El chatarrero orbital está limpio. Esta noche se ve el cielo sin restos por primera vez."},
   {n:120, t:"El arsenal, sellado y vaciado. Han decidido no volver a fabricar ni uno."},
   {n:140, t:"Llegaste al cráter. Aquí se apagó. Traen flores y no saben muy bien para quién."},
-  {n:170, t:"La ciudad tiene agua corriente. Hay quien ya no recuerda el ruido de las máquinas."},
-  {n:220, t:"Han levantado un monumento a los modificados. Tú no fuiste a la inauguración."}
+  {n:141, t:"Han subido a limpiar la órbita. Dicen que desde allí la ciudad ya parece encendida."},
+  {n:161, t:"Bajan a la fosa a cortar los cables de la flota hundida. Nadie duerme bien esa semana."},
+  {n:181, t:"Reabren la mina, pero para sacar mineral, no para enterrar nada."},
+  {n:200, t:"La ciudad tiene agua corriente. Hay quien ya no recuerda el ruido de las máquinas."},
+  {n:260, t:"Han levantado un monumento a los modificados. Tú no fuiste a la inauguración."}
 ];
 function estadoMundo(){
   let m = MUNDO[0];

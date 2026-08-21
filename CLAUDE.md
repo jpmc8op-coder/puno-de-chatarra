@@ -492,6 +492,41 @@ respuesta parcial (206) no se puede meter en la caché.
 
 Con `?sinintro` en la URL no se reproduce.
 
+## Los tres sectores que no están en tierra
+
+Los siete primeros sectores comparten aire y suelo. Los tres últimos no, y eso
+manda sobre todo lo demás: cielo, fondo, lo que flota y **la gravedad**.
+
+| Sector | `techo` | `fis` | `amb` | Cómo se reconoce |
+|---|---|---|---|---|
+| 8 · ÓRBITA MUERTA | planeta | vacío | polvo orbital | El planeta entero con su terminador, chatarra a la deriva |
+| 9 · FOSA ABISAL | superficie | agua | burbujas | Haces de luz desde arriba, burbujas subiendo, lomas de sedimento |
+| 10 · MINA PROFUNDA | roca | mina | polvo | Bóveda con estalactitas, paredes dentadas, vetas de mineral |
+
+**La física es la parte que se siente.** `FIS` da a cada ambiente su gravedad y
+su rozamiento, y se aplica a todos los restos. Medido, un mismo trozo lanzado
+igual en cada sector, al cabo de un segundo:
+
+| | Cae | Velocidad |
+|---|---|---|
+| Aire | +193 px | 746 |
+| Vacío | −251 px (sigue subiendo) | 427 |
+| Agua | −52 px | 84 — se queda suspendido |
+| Mina | +265 px | 801 |
+
+Tres sitios había que tocar para que el ambiente cuadrara, y el que más pesa es
+el tercero:
+
+1. `techoDe()` — lo que hay arriba. El astro partido solo sale donde hay cielo.
+2. `dibujarHorizonte()` — las siluetas: módulos a la deriva, pecios volcados con
+   fumarolas, entibado con lámparas.
+3. `dibujarPlanos()` — **los planos lejanos.** Seguían siendo bloques con
+   ventanas, o sea una ciudad en órbita, otra en el fondo del mar y otra dentro
+   de una mina. Ocupan media pantalla: era lo que más rompía la ilusión.
+
+El planeta del sector 8 se dibuja **entero**, no como una curva enorme cortada
+por arriba: probado así, se leía como una colina.
+
 ## Nada de `confirm()`
 
 El WebView de Android **no pinta los diálogos del sistema**, así que los tres
