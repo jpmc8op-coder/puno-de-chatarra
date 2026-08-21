@@ -399,6 +399,29 @@ body{
 #parte .pmt{font-size:10px;letter-spacing:1.6px;color:#a99ada;margin-bottom:4px;font-style:normal}
 #parte .ptope{font-size:11px;color:#a99ada;margin:2px 0 12px}
 #parte .bigbtn{margin-top:6px}
+/* ---------- PREGUNTA ----------
+   Hereda el aspecto del parte de turno: mismo marco, mismo relieve. */
+#dlg{position:fixed;inset:0;z-index:190;display:flex;align-items:center;justify-content:center;
+  background:rgba(13,9,37,.86);padding:18px;opacity:0;transition:opacity .22s}
+#dlg.on{opacity:1}
+#dlg .dcaja{width:100%;max-width:400px;background:linear-gradient(160deg,#3a2a7d,#241a52);
+  border:3px solid var(--borde);border-radius:26px;padding:20px 18px 16px;text-align:center;
+  box-shadow:inset 0 5px 0 rgba(255,255,255,.10), 0 8px 0 var(--borde);
+  transform:translateY(14px) scale(.97);transition:transform .22s}
+#dlg.on .dcaja{transform:none}
+#dlg .dcab{font-size:18px;font-weight:900;letter-spacing:1.8px;color:var(--amber);line-height:1.25}
+#dlg.peligro .dcab{color:#ff6b81}
+#dlg .dtxt{font-size:13.5px;color:#e8dcff;line-height:1.55;margin:12px 2px 16px;text-align:left}
+#dlg .dtxt b{color:#fff}
+#dlg .dbot{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+#dlg button{font-family:inherit;font-size:14px;font-weight:900;letter-spacing:1px;cursor:pointer;
+  padding:14px 8px;border-radius:16px;border:3px solid var(--borde);
+  background:var(--panel2);color:var(--dim);box-shadow:0 5px 0 var(--borde);transition:transform .1s}
+#dlg button:active{transform:translateY(4px);box-shadow:0 1px 0 var(--borde)}
+#dlg .dsi{background:linear-gradient(180deg,#ffd166,#f0a93c);color:#2a1a4d;
+  border-color:#8a5a12;box-shadow:0 5px 0 #8a5a12}
+#dlg.peligro .dsi{background:linear-gradient(180deg,#ff6b81,#c02a45);color:#fff;
+  border-color:#8c2740;box-shadow:0 5px 0 #8c2740}
 #toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);
   background:linear-gradient(160deg,#3a2a7d,#241a52);border:3px solid var(--amber);
   border-radius:22px;
@@ -5736,12 +5759,17 @@ function releva(caido, nuevo){
 function asimilar(){
   if(humanidad() > 0) return;
   const g = coresPend() * 2;
-  const NL = String.fromCharCode(10);
-  if(!confirm("PROTOCOLO DE ASIMILACION" + NL + NL
-    + "Te desmontas pieza por pieza y reciclas tu propio cuerpo." + NL + NL
-    + "Recuperas el 100% de humanidad y vuelves al aparato #1." + NL
-    + "Ganas " + g + " nucleos (el doble de lo normal) y un bono permanente de +50% a dano y chatarra." + NL + NL
-    + "Te reciclas?")) return;
+  preguntar({
+    titulo: "PROTOCOLO DE ASIMILACIÓN",
+    texto: "Te desmontas pieza por pieza y reciclas tu propio cuerpo.<br><br>"
+         + "Recuperas el <b>100% de humanidad</b> y vuelves al aparato #1.<br>"
+         + "Ganas <b>" + g + " núcleos</b> (el doble de lo normal) y un bono permanente de "
+         + "<b>+50% a daño y chatarra</b>.",
+    si: "RECICLARME",
+    alSi: () => asimilarYa(g)
+  });
+}
+function asimilarYa(g){
   const cores = S.cores + g, resets = S.resets + 1, asim = S.asim + 1,
         all = S.allTime, best = S.best, snd = S.sound, lg = S.logros,
         rel = S.reliquias || [], sig = ((S.heroe || 0) + 1) % HEROES.length;
@@ -5765,11 +5793,16 @@ function asimilar(){
 function prestigio(){
   const g = coresPend();
   if(g <= 0) return;
-  const NL2 = String.fromCharCode(10);
-  if(!confirm("RECICLAJE PROFUNDO" + NL2 + NL2
-    + "Vuelves al aparato #1 y pierdes chatarra, equipo e implantes." + NL2
-    + "A cambio ganas " + g + " nucleos permanentes (+" + (g*2) + "% de dano y chatarra para siempre)." + NL2 + NL2
-    + "Confirmas?")) return;
+  preguntar({
+    titulo: "RECICLAJE PROFUNDO",
+    texto: "Vuelves al aparato #1 y pierdes chatarra, equipo e implantes.<br><br>"
+         + "A cambio ganas <b>" + g + " núcleos permanentes</b>: <b>+" + (g*2)
+         + "% de daño y chatarra</b>, para siempre.",
+    si: "RECICLAR",
+    alSi: () => prestigioYa(g)
+  });
+}
+function prestigioYa(g){
   const cores = S.cores + g, resets = S.resets + 1, all = S.allTime,
         best = S.best, snd = S.sound, lg = S.logros;
   S = NEW();
@@ -5780,6 +5813,39 @@ function prestigio(){
   chispas(CW/2, CH/2, 120, CONFETI, 2);
   toast("+" + g + " NÚCLEOS<br>multiplicador x" + (1 + cores*0.02).toFixed(2));
   pintarAparato(); construir(); refrescar(); guardar();
+}
+
+/* ---------- PREGUNTAR ----------
+   `confirm()` del navegador NO aparece dentro de la app: el WebView de Android
+   no pinta los dialogos del sistema, asi que los tres botones que dependian de
+   el —borrar la partida, reciclar y asimilarse— no hacian nada de nada. Y dos
+   de esos tres son el bucle principal del juego, no un extra.
+
+   Ademas, un cuadro gris del sistema en mitad de esto cantaba muchisimo. Este
+   pregunta con el mismo marco que el parte de turno.
+
+   Es asincrono (con callback) donde `confirm` era sincrono, asi que quien lo
+   llama no puede hacer `if(!confirm(...)) return;`: lo que venia despues tiene
+   que entrar dentro del `alSi`.                                              */
+function preguntar(cfg){
+  const v = document.getElementById("dlg");
+  if(v) v.remove();
+  const d = document.createElement("div");
+  d.id = "dlg";
+  if(cfg.peligro) d.classList.add("peligro");
+  d.innerHTML = '<div class="dcaja">'
+    + '<div class="dcab">' + cfg.titulo + '</div>'
+    + '<div class="dtxt">' + cfg.texto + '</div>'
+    + '<div class="dbot"><button class="dno">CANCELAR</button>'
+    + '<button class="dsi">' + (cfg.si || "CONFIRMAR") + '</button></div></div>';
+  document.body.appendChild(d);
+  requestAnimationFrame(() => d.classList.add("on"));
+
+  const cerrar = () => { d.classList.remove("on"); setTimeout(() => d.remove(), 240); };
+  d.querySelector(".dno").onclick = cerrar;
+  d.querySelector(".dsi").onclick = () => { cerrar(); cfg.alSi(); };
+  // Tocar fuera del cuadro es cancelar, nunca aceptar.
+  d.onclick = e => { if(e.target === d) cerrar(); };
 }
 
 /* ---------- 19. INTERFAZ ---------- */
@@ -6718,15 +6784,20 @@ $("bSound").onclick = () => {
   $("bSound").classList.toggle("on", S.sound);
   if(S.sound) sfx("buy");
 };
-$("bReset").onclick = () => {
-  if(!confirm("BORRAR LA PARTIDA\n\nSe pierde todo: chatarra, implantes, núcleos y sectores.\n"
-     + "Esto NO es el reciclaje: el reciclaje está en la pestaña NÚCLEOS y te hace más fuerte.\n\n"
-     + "¿Seguro que quieres borrarla?")) return;
-  localStorage.removeItem("pdc_save");
-  S = NEW(); S.hp = maxHp(1);
-  nuevasMordidas(); pintarAparato(); construir(); refrescar();
-  toast("Partida reiniciada");
-};
+$("bReset").onclick = () => preguntar({
+  titulo: "BORRAR LA PARTIDA",
+  peligro: true,
+  texto: "Se pierde <b>todo</b>: chatarra, implantes, núcleos y sectores.<br><br>"
+       + "Esto <b>no</b> es el reciclaje. El reciclaje está en la pestaña "
+       + "<b>NÚCLEOS</b> y te hace más fuerte.",
+  si: "BORRAR",
+  alSi: () => {
+    localStorage.removeItem("pdc_save");
+    S = NEW(); S.hp = maxHp(1);
+    nuevasMordidas(); pintarAparato(); construir(); refrescar();
+    toast("Partida reiniciada");
+  }
+});
 
 /* ---------- 24. PERSISTENCIA ---------- */
 function guardar(){

@@ -492,6 +492,23 @@ respuesta parcial (206) no se puede meter en la caché.
 
 Con `?sinintro` en la URL no se reproduce.
 
+## Nada de `confirm()`
+
+El WebView de Android **no pinta los diálogos del sistema**, así que los tres
+botones que dependían de `confirm()` no hacían absolutamente nada dentro de la
+app: borrar la partida (la ✕ roja), **RECICLAJE PROFUNDO** y **PROTOCOLO DE
+ASIMILACIÓN**. Los dos últimos son el bucle principal del juego, no un extra —
+en el navegador funcionaban, y por eso pasó desapercibido.
+
+Todo pasa por `preguntar({titulo, texto, si, peligro, alSi})`, que usa el mismo
+marco que el parte de turno. Ojo al cambiar de sitio: **es asíncrono** donde
+`confirm` era síncrono, así que no vale `if(!confirm(...)) return;` — lo que
+venía después tiene que entrar dentro de `alSi`. Por eso `prestigio()` y
+`asimilar()` se partieron en dos, con `prestigioYa()` y `asimilarYa()` haciendo
+el trabajo.
+
+Regla para lo que venga: **nada de `alert`, `confirm` ni `prompt`.** No se ven.
+
 ## Cuando algo llega al tope
 
 Una mejora al máximo solo cambiaba el precio por un «MÁX» pequeño **en ámbar, el
