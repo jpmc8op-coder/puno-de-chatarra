@@ -5,7 +5,7 @@
    IMPORTANTE: al publicar una versión nueva hay que subir VERSION. Si no, el
    móvil sigue sirviendo la copia vieja de la caché y parece que los cambios no
    se han aplicado.                                                            */
-const VERSION = "pdc-v14";
+const VERSION = "pdc-v15";
 const ARCHIVOS = [
   "./",
   "./index.html",
@@ -36,6 +36,25 @@ self.addEventListener("activate", e => {
    desinstalar para ver una actualización. */
 self.addEventListener("fetch", e => {
   if(e.request.method !== "GET") return;
+
+  /* El video de la intro va al reves que todo lo demas: CACHE PRIMERO. Con la
+     regla general —red primero— se rebajaria los 7,6 MB en cada arranque, que
+     con datos moviles es una barbaridad para algo que no cambia nunca.
+
+     Ademas se pide entero y a mano: el elemento <video> pide TROZOS (cabecera
+     `Range`) y la respuesta parcial que llega, un 206, no se puede meter en la
+     cache. Pidiendolo aparte, sin Range, si se guarda. */
+  if(e.request.url.indexOf(".mp4") >= 0){
+    e.respondWith(caches.open(VERSION).then(async c => {
+      const guardado = await c.match("./intro.mp4");
+      if(guardado) return guardado;
+      const r = await fetch("./intro.mp4");
+      if(r.ok) c.put("./intro.mp4", r.clone());
+      return r;
+    }).catch(() => fetch(e.request)));
+    return;
+  }
+
   e.respondWith(
     fetch(e.request)
       .then(r => {

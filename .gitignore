@@ -19,3 +19,7 @@ _apk-build.log
 
 # Las laminas de diseno se regeneran con `?lamina`; no hace falta versionarlas.
 _lamina/
+
+# El video original tal como salio del generador; en el repo va `intro.mp4`,
+# que es el mismo con el indice movido al principio.
+into.mp4

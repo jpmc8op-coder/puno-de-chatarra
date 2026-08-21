@@ -408,6 +408,30 @@ body{
   text-align:center;max-width:88vw}
 #toast.on{opacity:1;transform:translateX(-50%) translateY(8px)}
 
+/* ---------- INTRO ----------
+   Empieza VISIBLE, sin esperar al JS: si se enseñara desde el guion, se veria
+   un parpadeo del juego antes de taparlo. Se apaga sola con el vigilante que
+   hay justo debajo del marcado, por si el guion nunca llega a arrancar. */
+#intro{position:fixed;inset:0;z-index:200;background:#0d0925;
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity .45s}
+#intro.fuera{opacity:0;pointer-events:none}
+#introVid{width:100%;height:100%;object-fit:contain;background:#0d0925;display:block}
+#intro button{position:absolute;font-family:inherit;cursor:pointer;
+  border:3px solid rgba(255,255,255,.34);border-radius:16px;
+  background:rgba(13,9,37,.62);color:#efe9ff;backdrop-filter:blur(3px)}
+#introSalt{right:14px;bottom:22px;padding:10px 16px;font-size:13px;
+  font-weight:900;letter-spacing:1.4px}
+#introSon{right:14px;top:16px;width:46px;height:46px;font-size:19px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center}
+#introBar{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,.13)}
+#introBar i{display:block;height:100%;width:0;background:var(--amber)}
+/* El aviso de que se puede tocar para saltar: aparece y se va, sin insistir */
+#introPista{position:absolute;left:0;right:0;bottom:64px;text-align:center;
+  font-size:12px;letter-spacing:2px;color:rgba(239,233,255,.66);pointer-events:none;
+  animation:introPista 3.4s forwards}
+@keyframes introPista{0%,12%{opacity:0} 30%,72%{opacity:1} 100%{opacity:0}}
+
 /* ---------- GUIA DE LA PRIMERA PARTIDA ----------
    Un clicker se explica solo... a quien ya ha jugado a uno. Al resto hay que
    decirle que la pantalla se toca, que el numero de arriba es la moneda y que
@@ -549,6 +573,23 @@ body{
 
 </div>
 <div id="toast"></div>
+
+<div id="intro">
+  <video id="introVid" playsinline muted preload="auto" src="intro.mp4"></video>
+  <button id="introSon" title="Sonido">&#128263;</button>
+  <button id="introSalt">SALTAR &#9654;</button>
+  <div id="introPista">TOCA PARA SALTAR</div>
+  <div id="introBar"><i></i></div>
+</div>
+<script>
+/* Vigilante, aparte del guion del juego: si el guion peta antes de encargarse de
+   la intro, esta pantalla se quedaria tapando el juego para siempre. */
+setTimeout(function(){
+  var i = document.getElementById("intro");
+  if(i && !i.dataset.ok) i.remove();
+}, 8000);
+</script>
+
 <div id="tuto">
   <div id="tutoCap"></div>
   <div id="tutoFoco"></div>
@@ -7527,6 +7568,58 @@ $("tutoSalt").onclick = e => { e.stopPropagation(); tutoFin(); };
 $("verTuto").onclick = () => tutoIniciar();
 window.addEventListener("resize", () => { if(enTuto()) tutoColocar(); });
 
+
+/* ---------- 24c. LA INTRO ----------
+   Se reproduce al abrir y se puede saltar tocando en cualquier sitio desde el
+   primer fotograma — una intro de la que no se puede salir se convierte en un
+   peaje, y esta app se abre muchas veces al dia.
+
+   Arranca MUDA a la fuerza: Android e iOS no dejan que un video con sonido se
+   lance solo, asi que pedirlo con audio significa que no se reproduce nada. El
+   boton del altavoz lo enciende, y ese toque vale ademas para desbloquear el
+   audio del juego, que tambien necesita un gesto.
+
+   Y nunca deja al jugador mirando una pantalla negra: si el video falla, o si en
+   dos segundos y medio no ha conseguido empezar, se quita y entra al juego.   */
+function intro(despues){
+  const caja = $("intro"), v = $("introVid");
+  const saltar = location.search.indexOf("sinintro") >= 0;
+  if(!caja){ despues(); return; }
+  caja.dataset.ok = "1";                       // el vigilante ya no hace falta
+  if(saltar){ caja.remove(); despues(); return; }
+
+  let cerrado = false, arranco = false;
+  const cerrar = () => {
+    if(cerrado) return;
+    cerrado = true;
+    clearTimeout(espera);
+    try{ v.pause(); }catch(e){}
+    caja.classList.add("fuera");
+    setTimeout(() => caja.remove(), 500);      // que termine el fundido
+    ac();                                      // el toque sirve para abrir el audio
+    despues();
+  };
+
+  const espera = setTimeout(() => { if(!arranco) cerrar(); }, 2500);
+  v.addEventListener("playing", () => { arranco = true; clearTimeout(espera); });
+  v.addEventListener("ended", cerrar);
+  v.addEventListener("error", cerrar);
+  v.addEventListener("timeupdate", () => {
+    if(v.duration) caja.querySelector("#introBar i").style.width = (v.currentTime/v.duration*100) + "%";
+  });
+  caja.addEventListener("pointerdown", cerrar);
+
+  $("introSon").addEventListener("pointerdown", e => {
+    e.stopPropagation();                       // subir el volumen no es saltar
+    v.muted = !v.muted;
+    $("introSon").innerHTML = v.muted ? "&#128263;" : "&#128266;";
+  });
+  $("introSalt").addEventListener("pointerdown", e => { e.stopPropagation(); cerrar(); });
+
+  const r = v.play();
+  if(r && r.catch) r.catch(cerrar);            // si el navegador se niega, al juego
+}
+
 /* ---------- 25. ARRANQUE ---------- */
 if(location.search.indexOf("variantes") >= 0){
   construir(); hojaVariantes();
@@ -7581,7 +7674,11 @@ refrescar();
 /* La guia sale sola la primera vez. Con `?tuto` en la URL se puede volver a
    ver sin borrar la partida, y desde NUCLEOS hay boton para repetirla. */
 if(S.tuto) marcarGuia();          // partidas de antes: ya la habian visto
-if(!guiaVista() || location.search.indexOf("tuto") >= 0) setTimeout(tutoIniciar, 700);
+// La guia va DETRAS de la intro: lanzadas a la vez, las nubes salian debajo del
+// video y el jugador se perdia el primer paso.
+intro(() => {
+  if(!guiaVista() || location.search.indexOf("tuto") >= 0) setTimeout(tutoIniciar, 500);
+});
 setInterval(guardar, 5000);
 
 /* `beforeunload` NO se dispara en moviles al cambiar de app ni al cerrarla, que

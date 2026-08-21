@@ -461,6 +461,37 @@ se entrega a golpes que se ven en vez de goteando.
 todavía no tiene implantes cazaba el bono más vistoso del juego para no recibir
 absolutamente nada.
 
+## La intro
+
+`intro.mp4` — 13 s, 720×1280, H.264 + AAC, 7,6 MB. Se reproduce al abrir la app,
+antes de la guía, y **se salta tocando en cualquier sitio desde el primer
+fotograma**: una intro de la que no se puede salir es un peaje, y esto se abre
+muchas veces al día.
+
+Tres cosas que no son opcionales:
+
+- **Arranca muda.** Android e iOS no dejan que un vídeo con sonido se lance solo;
+  pedirlo con audio significa que no se reproduce nada. El botón del altavoz lo
+  enciende, y ese toque sirve además para desbloquear el `AudioContext` del
+  juego, que también necesita un gesto.
+- **Nunca deja una pantalla negra.** Si el vídeo da error, o si en 2,5 s no ha
+  conseguido empezar, se quita y entra al juego. Y hay un vigilante en un
+  `<script>` aparte, justo debajo del marcado, que la borra a los 8 s por si el
+  guion principal peta antes de encargarse de ella.
+- **El índice del MP4 va al principio.** Tal como salió del generador el orden
+  era `ftyp uuid free mdat moov`, con el índice detrás de los datos: así el
+  navegador tiene que bajarse los 7,6 MB enteros antes de pintar un fotograma.
+  Movido delante, con los primeros 11 KB ya puede empezar. Se hizo sin
+  recodificar, moviendo la caja `moov` y sumando el desplazamiento a los 624
+  punteros `stco`. El original sin tocar es `into.mp4`, fuera del repo.
+
+En el service worker el vídeo va **al revés que todo lo demás: caché primero**.
+Con la regla general —red primero— se bajaría 7,6 MB en cada arranque. Y se pide
+entero y a mano, porque `<video>` pide trozos con cabecera `Range` y una
+respuesta parcial (206) no se puede meter en la caché.
+
+Con `?sinintro` en la URL no se reproduce.
+
 ## Cuando algo llega al tope
 
 Una mejora al máximo solo cambiaba el precio por un «MÁX» pequeño **en ámbar, el

@@ -20,6 +20,7 @@ Get-ChildItem $www -File -ErrorAction SilentlyContinue | Remove-Item -Force
 
 $archivos = @(
   'index.html',
+  'intro.mp4',
   'manifest.webmanifest',
   'privacidad.html',
   'icono-192.png',
