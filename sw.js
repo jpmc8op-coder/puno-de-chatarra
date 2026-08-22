@@ -5,7 +5,7 @@
    IMPORTANTE: al publicar una versión nueva hay que subir VERSION. Si no, el
    móvil sigue sirviendo la copia vieja de la caché y parece que los cambios no
    se han aplicado.                                                            */
-const VERSION = "pdc-v17";
+const VERSION = "pdc-v18";
 const ARCHIVOS = [
   "./",
   "./index.html",
